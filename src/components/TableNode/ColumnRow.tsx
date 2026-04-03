@@ -54,7 +54,7 @@ const ColumnRow = memo(function ColumnRow({
 
   return (
     <div
-      className={`nodrag flex items-center gap-1.5 px-3 py-1.5 text-sm ${
+      className={`nodrag flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors duration-150 ${
         isDragging ? 'opacity-30' : ''
       } ${isDragOver && !isDragging ? 'ring-t-2 ring-inset border-t-2 border-primary' : ''}`}
       onDragOver={(e) => {
@@ -79,7 +79,7 @@ const ColumnRow = memo(function ColumnRow({
       </div>
 
       <button
-        className={`w-5 shrink-0 text-center ${
+        className={`w-5 shrink-0 text-center transition-colors duration-150 ${
           column.isPrimaryKey ? 'text-yellow-500' : 'text-gray-300 dark:text-gray-600'
         }`}
         onClick={() => toggleColumnPrimaryKey(tableId, column.id)}
@@ -128,7 +128,7 @@ const ColumnRow = memo(function ColumnRow({
       </select>
 
       <button
-        className={`shrink-0 text-xs ${
+        className={`shrink-0 text-xs transition-colors duration-150 ${
           !column.isNullable
             ? 'font-bold text-red-500'
             : 'text-muted-foreground'
@@ -141,7 +141,7 @@ const ColumnRow = memo(function ColumnRow({
       </button>
 
       <button
-        className={`shrink-0 text-xs ${
+        className={`shrink-0 text-xs transition-colors duration-150 ${
           column.isUnique
             ? 'font-bold text-purple-500'
             : 'text-muted-foreground'

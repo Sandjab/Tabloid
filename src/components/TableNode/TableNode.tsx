@@ -32,7 +32,7 @@ const TableNode = memo(function TableNode({ id, data }: NodeProps<TableFlowNode>
 
   return (
     <div
-      className="min-w-[250px] rounded-lg border border-border bg-popover shadow-md"
+      className="min-w-[250px] rounded-lg border border-border bg-popover shadow-md transition-shadow duration-200 hover:shadow-lg"
       data-testid={`table-node-${id}`}
     >
       {/* Header */}
@@ -108,7 +108,7 @@ const TableNode = memo(function TableNode({ id, data }: NodeProps<TableFlowNode>
       {/* Columns with per-column handles */}
       <div className="divide-y divide-border">
         {table.columns.map((column, index) => (
-          <div key={column.id} className="relative">
+          <div key={column.id} className="group/row relative">
             <ColumnRow
               tableId={id}
               column={column}
@@ -129,14 +129,14 @@ const TableNode = memo(function TableNode({ id, data }: NodeProps<TableFlowNode>
               type="target"
               position={Position.Left}
               id={makeHandleId(column.id, 'target')}
-              className="!left-0 !h-2.5 !w-2.5 !-translate-x-1/2 !border-2 !border-white !bg-blue-500 opacity-30 hover:opacity-100"
+              className="!left-0 !h-2.5 !w-2.5 !border-2 !border-white !bg-blue-500 !opacity-0 transition-opacity hover:!opacity-100"
               data-testid={`handle-target-${column.id}`}
             />
             <Handle
               type="source"
               position={Position.Right}
               id={makeHandleId(column.id, 'source')}
-              className="!right-0 !h-2.5 !w-2.5 !translate-x-1/2 !border-2 !border-white !bg-blue-500 opacity-30 hover:opacity-100"
+              className="!right-0 !h-2.5 !w-2.5 !border-2 !border-white !bg-blue-500 !opacity-0 transition-opacity hover:!opacity-100"
               data-testid={`handle-source-${column.id}`}
             />
           </div>

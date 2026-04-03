@@ -42,7 +42,7 @@ export default function ValidationPanel() {
 
   return (
     <div
-      className="absolute bottom-4 left-4 z-10 max-w-sm rounded-lg bg-popover shadow-lg ring-1 ring-border"
+      className="absolute bottom-4 left-4 z-10 max-w-sm rounded-lg bg-popover/80 backdrop-blur-md shadow-lg ring-1 ring-border"
       data-testid="validation-panel"
     >
       <Button
@@ -52,7 +52,7 @@ export default function ValidationPanel() {
         data-testid="validation-toggle"
       >
         {errorCount > 0 && (
-          <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-destructive">
+          <span className="animate-badge-pulse rounded bg-destructive/10 px-1.5 py-0.5 text-destructive">
             {errorCount} error{errorCount !== 1 ? 's' : ''}
           </span>
         )}

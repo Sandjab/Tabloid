@@ -14,10 +14,30 @@
   cursor: default !important;
 }
 
+/* Canvas background — warm tint instead of pure white */
+.react-flow__background {
+  opacity: 0.5;
+}
+
 /* MiniMap styling */
 .react-flow__minimap-mask {
   fill: rgb(0 0 0 / 0.15);
 }
+/* Controls styling */
+.dark .react-flow__controls {
+  background-color: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+.dark .react-flow__controls-button {
+  background-color: #1f2937;
+  fill: #d1d5db;
+  border-color: #374151;
+}
+.dark .react-flow__controls-button:hover {
+  background-color: #374151;
+}
+
 .dark .react-flow__minimap {
   background-color: #1f2937;
 }
@@ -26,6 +46,16 @@
 }
 .dark .react-flow__minimap-node {
   fill: #60a5fa;
+}
+
+
+/* Validation panel error pulse */
+@keyframes badge-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+.animate-badge-pulse {
+  animation: badge-pulse 2s ease-in-out infinite;
 }
 
 @theme inline {
@@ -72,7 +102,7 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
+  --background: oklch(0.993 0.003 80);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);

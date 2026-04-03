@@ -74,7 +74,7 @@ export default function Toolbar({ onSearchOpen, onExportOpen }: ToolbarProps) {
 
   return (
     <div
-      className="absolute left-4 top-4 z-10 flex items-center gap-1 rounded-lg bg-popover p-1 shadow-lg ring-1 ring-border"
+      className="absolute left-4 top-4 z-10 flex items-center gap-1 rounded-lg bg-popover/80 backdrop-blur-md p-1 shadow-lg ring-1 ring-border"
       data-testid="toolbar"
     >
       <Button

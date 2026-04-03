@@ -78,18 +78,21 @@ const RelationEdge = memo(function RelationEdge({
     ? 0.5
     : 0.3 + (bundleIndex / (bundleCount - 1)) * 0.4;
 
-  const turnX = sourceX + (targetX - sourceX) * stepPosition + spreadOffset;
+  const sx = sourceX;
+  const tx = targetX + 10;
+
+  const turnX = sx + (tx - sx) * stepPosition + spreadOffset;
 
   // Use custom 3-segment path for normal left-to-right edges,
   // fall back to getSmoothStepPath for reversed/unusual layouts.
   let edgePath: string, labelX: number, labelY: number;
-  const isNormalLayout = (targetX - sourceX) > 40;
+  const isNormalLayout = (tx - sx) > 40;
 
   if (isNormalLayout) {
-    [edgePath, labelX, labelY] = buildStepPath(sourceX, sourceY, targetX, targetY, turnX);
+    [edgePath, labelX, labelY] = buildStepPath(sx, sourceY, tx, targetY, turnX);
   } else {
     [edgePath, labelX, labelY] = getSmoothStepPath({
-      sourceX, sourceY, targetX, targetY,
+      sourceX: sx, sourceY, targetX: tx, targetY,
       sourcePosition, targetPosition,
       borderRadius: BORDER_RADIUS,
     });
@@ -110,13 +113,24 @@ const RelationEdge = memo(function RelationEdge({
 
   return (
     <>
+      {/* Glow layer when selected */}
+      {selected && (
+        <path
+          d={edgePath}
+          fill="none"
+          stroke={EDGE_COLOR_SELECTED}
+          strokeWidth={10}
+          strokeOpacity={0.15}
+          strokeLinecap="round"
+        />
+      )}
       {/* White outline creates a "bridge" effect at edge crossings */}
       <path
         d={edgePath}
         fill="none"
         stroke="white"
         strokeWidth={strokeWidth + 6}
-        className="dark:stroke-gray-800"
+        className="dark:stroke-[#1a1a1a]"
       />
       <BaseEdge
         id={id}
