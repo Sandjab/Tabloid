@@ -4,7 +4,7 @@ import { useSchemaStore } from '@/store/useSchemaStore';
 import { useInlineEdit } from '@/hooks/useInlineEdit';
 import { COLUMN_TYPES } from '@/types/schema';
 import type { Column, ColumnType } from '@/types/schema';
-import { GripVertical } from 'lucide-react';
+import { GripVertical, KeyRound } from 'lucide-react';
 
 interface ColumnRowProps {
   tableId: string;
@@ -81,19 +81,19 @@ const ColumnRow = memo(function ColumnRow({
       </div>
 
       <button
-        className={`w-5 shrink-0 text-center transition-colors duration-150 ${
-          column.isPrimaryKey ? 'text-yellow-500' : 'text-gray-300 dark:text-gray-600'
+        className={`w-4 shrink-0 flex items-center justify-center transition-colors duration-150 ${
+          column.isPrimaryKey ? 'text-amber-500' : 'text-border'
         }`}
         onClick={() => toggleColumnPrimaryKey(tableId, column.id)}
         title="Toggle Primary Key"
         data-testid={`column-pk-${column.id}`}
       >
-        {column.isPrimaryKey ? '🔑' : '·'}
+        {column.isPrimaryKey ? <KeyRound className="size-3" /> : <span className="text-xs">·</span>}
       </button>
 
       {isEditing ? (
         <input
-          className="nowheel w-20 rounded border border-input px-1 text-sm"
+          className="nowheel w-[120px] rounded border border-input px-1 text-sm"
           defaultValue={column.name}
           autoFocus
           onBlur={(e) => handleSubmit(e.target.value)}
@@ -105,7 +105,7 @@ const ColumnRow = memo(function ColumnRow({
         />
       ) : (
         <span
-          className="w-20 cursor-pointer truncate text-foreground"
+          className="w-[120px] cursor-pointer truncate text-foreground"
           onDoubleClick={startEditing}
           title={column.name}
           data-testid={`column-name-${column.id}`}
@@ -132,8 +132,8 @@ const ColumnRow = memo(function ColumnRow({
       <button
         className={`shrink-0 text-xs transition-colors duration-150 ${
           !column.isNullable
-            ? 'font-bold text-red-500'
-            : 'text-muted-foreground'
+            ? 'font-semibold text-rose-500'
+            : 'text-muted-foreground/60'
         }`}
         onClick={() => toggleColumnNullable(tableId, column.id)}
         title="Toggle NOT NULL"
@@ -145,8 +145,8 @@ const ColumnRow = memo(function ColumnRow({
       <button
         className={`shrink-0 text-xs transition-colors duration-150 ${
           column.isUnique
-            ? 'font-bold text-purple-500'
-            : 'text-muted-foreground'
+            ? 'font-semibold text-violet-500'
+            : 'text-muted-foreground/60'
         }`}
         onClick={() => toggleColumnUnique(tableId, column.id)}
         title="Toggle UNIQUE"
