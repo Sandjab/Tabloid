@@ -115,6 +115,7 @@ const TableNode = memo(function TableNode({ id, data }: NodeProps<TableFlowNode>
               index={index}
               isDragging={draggedIndex === index}
               isDragOver={dragOverIndex === index}
+              dragBelow={draggedIndex !== null && draggedIndex < index}
               onDragStart={() => setDraggedIndex(index)}
               onDragEnd={() => {
                 if (draggedIndex !== null && dragOverIndex !== null && draggedIndex !== dragOverIndex) {

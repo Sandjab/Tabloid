@@ -12,6 +12,7 @@ interface ColumnRowProps {
   index: number;
   isDragging: boolean;
   isDragOver: boolean;
+  dragBelow: boolean;
   onDragStart: () => void;
   onDragEnd: () => void;
   onDragOverIndex: (index: number) => void;
@@ -23,6 +24,7 @@ const ColumnRow = memo(function ColumnRow({
   index,
   isDragging,
   isDragOver,
+  dragBelow,
   onDragStart,
   onDragEnd,
   onDragOverIndex,
@@ -56,7 +58,7 @@ const ColumnRow = memo(function ColumnRow({
     <div
       className={`nodrag flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors duration-150 ${
         isDragging ? 'opacity-30' : ''
-      } ${isDragOver && !isDragging ? 'ring-t-2 ring-inset border-t-2 border-primary' : ''}`}
+      } ${isDragOver && !isDragging ? (dragBelow ? 'border-b-2 border-primary' : 'border-t-2 border-primary') : ''}`}
       onDragOver={(e) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
