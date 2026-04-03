@@ -10,19 +10,17 @@ export default function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const openSearch = useCallback(() => setSearchOpen(true), []);
-  const closeSearch = useCallback(() => setSearchOpen(false), []);
   const openExport = useCallback(() => setExportOpen(true), []);
-  const closeExport = useCallback(() => setExportOpen(false), []);
 
   useAutoSave();
   useEffect(() => { loadFromLocalStorage(); }, []);
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-white dark:bg-gray-900">
+    <div className="relative h-screen w-screen overflow-hidden bg-background">
       <Toolbar onSearchOpen={openSearch} onExportOpen={openExport} />
       <Canvas onSearchOpen={openSearch} />
-      {searchOpen && <SearchDialog onClose={closeSearch} />}
-      {exportOpen && <ExportDialog onClose={closeExport} />}
+      <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+      <ExportDialog open={exportOpen} onOpenChange={setExportOpen} />
       <ValidationPanel />
     </div>
   );

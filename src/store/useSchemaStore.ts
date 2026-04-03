@@ -37,6 +37,7 @@ export interface SchemaState {
 
   addColumn: (tableId: string) => void;
   removeColumn: (tableId: string, columnId: string) => void;
+  moveColumn: (tableId: string, fromIndex: number, toIndex: number) => void;
   updateColumnName: (tableId: string, columnId: string, name: string) => void;
   updateColumnType: (tableId: string, columnId: string, type: ColumnType) => void;
   toggleColumnPrimaryKey: (tableId: string, columnId: string) => void;
@@ -100,16 +101,86 @@ function updateColumnInTable(
   };
 }
 
-function buildEdgesFromRelations(relations: Relation[]): Edge[] {
-  return relations.map((r) => ({
-    id: r.id,
-    source: r.sourceTableId,
-    sourceHandle: makeHandleId(r.sourceColumnId, 'source'),
-    target: r.targetTableId,
-    targetHandle: makeHandleId(r.targetColumnId, 'target'),
-    type: 'relation',
-    data: { relationType: r.type },
-  }));
+function getColIndex(tables: Table[], tableId: string, columnId: string): number {
+  const table = tables.find((t) => t.id === tableId);
+  if (!table) return 0;
+  const idx = table.columns.findIndex((c) => c.id === columnId);
+  return idx === -1 ? 0 : idx;
+}
+
+function buildEdgesFromRelations(relations: Relation[], tables: Table[]): Edge[] {
+  const tableY = new Map(tables.map((t) => [t.id, t.position.y]));
+
+  // Group edges by unordered table pair to detect parallel edges
+  const pairGroups = new Map<string, number[]>();
+  relations.forEach((r, i) => {
+    const key = [r.sourceTableId, r.targetTableId].sort().join(':');
+    const group = pairGroups.get(key);
+    if (group) group.push(i);
+    else pairGroups.set(key, [i]);
+  });
+
+  // Sort each group so the edge with the longest vertical travel gets the
+  // earliest turn (leftmost lane), creating nested paths that can't cross.
+  // Direction matters: going DOWN → descending target index; going UP → ascending.
+  for (const indices of pairGroups.values()) {
+    if (indices.length < 2) continue;
+    const r0 = relations[indices[0]];
+    const srcY = tableY.get(r0.sourceTableId) ?? 0;
+    const tgtY = tableY.get(r0.targetTableId) ?? 0;
+    const goingDown = tgtY >= srcY;
+
+    indices.sort((a, b) => {
+      const ra = relations[a], rb = relations[b];
+      const tgtA = getColIndex(tables, ra.targetTableId, ra.targetColumnId);
+      const tgtB = getColIndex(tables, rb.targetTableId, rb.targetColumnId);
+      // Going down: descending (bottom target first). Going up: ascending (top target first).
+      return goingDown ? tgtB - tgtA : tgtA - tgtB;
+    });
+  }
+
+  // Assign sibling index and count for each edge in its group
+  const siblingInfo = new Array<{ index: number; count: number }>(relations.length);
+  for (const indices of pairGroups.values()) {
+    for (let j = 0; j < indices.length; j++) {
+      siblingInfo[indices[j]] = { index: j, count: indices.length };
+    }
+  }
+
+  // Compute bundle info: edges from the same source to different targets get
+  // different stepPositions so their vertical segments don't overlap.
+  // Sort target tables by Y position so upper targets turn earlier.
+  const sourceGroups = new Map<string, Set<string>>();
+  for (const r of relations) {
+    let targets = sourceGroups.get(r.sourceTableId);
+    if (!targets) { targets = new Set(); sourceGroups.set(r.sourceTableId, targets); }
+    targets.add(r.targetTableId);
+  }
+  const sortedTargets = new Map<string, string[]>();
+  for (const [srcId, targets] of sourceGroups) {
+    sortedTargets.set(srcId, [...targets].sort((a, b) => (tableY.get(a) ?? 0) - (tableY.get(b) ?? 0)));
+  }
+
+  return relations.map((r, i) => {
+    const targets = sortedTargets.get(r.sourceTableId) ?? [r.targetTableId];
+    const bundleIndex = targets.indexOf(r.targetTableId);
+    const bundleCount = targets.length;
+    return {
+      id: r.id,
+      source: r.sourceTableId,
+      sourceHandle: makeHandleId(r.sourceColumnId, 'source'),
+      target: r.targetTableId,
+      targetHandle: makeHandleId(r.targetColumnId, 'target'),
+      type: 'relation',
+      data: {
+        relationType: r.type,
+        siblingIndex: siblingInfo[i].index,
+        siblingCount: siblingInfo[i].count,
+        bundleIndex,
+        bundleCount,
+      },
+    };
+  });
 }
 
 function buildNodesFromTables(tables: Table[]): Node<TableNodeData>[] {
@@ -157,6 +228,19 @@ export const useSchemaStore = create<SchemaState>()(
             const node = updatedNodes.find((n) => n.id === table.id);
             return node ? { ...table, position: node.position } : table;
           });
+
+          // On drag end, rebuild edges so sort order reflects new positions
+          const dragEnded = changes.some(
+            (c) => c.type === 'position' && 'dragging' in c && c.dragging === false,
+          );
+          if (dragEnded && state.relations.length > 0) {
+            return {
+              nodes: updatedNodes,
+              tables: updatedTables,
+              edges: buildEdgesFromRelations(state.relations, updatedTables),
+            };
+          }
+
           return { nodes: updatedNodes, tables: updatedTables };
         });
       },
@@ -200,14 +284,15 @@ export const useSchemaStore = create<SchemaState>()(
 
       removeTable: (tableId) => {
         set((state) => {
+          const updatedTables = state.tables.filter((t) => t.id !== tableId);
           const updatedRelations = state.relations.filter(
             (r) => r.sourceTableId !== tableId && r.targetTableId !== tableId,
           );
           return {
-            tables: state.tables.filter((t) => t.id !== tableId),
+            tables: updatedTables,
             nodes: state.nodes.filter((n) => n.id !== tableId),
             relations: updatedRelations,
-            edges: buildEdgesFromRelations(updatedRelations),
+            edges: buildEdgesFromRelations(updatedRelations, updatedTables),
           };
         });
       },
@@ -254,9 +339,21 @@ export const useSchemaStore = create<SchemaState>()(
           return {
             ...result,
             relations: updatedRelations,
-            edges: buildEdgesFromRelations(updatedRelations),
+            edges: buildEdgesFromRelations(updatedRelations, result.tables),
           };
         });
+      },
+
+      moveColumn: (tableId, fromIndex, toIndex) => {
+        if (fromIndex === toIndex) return;
+        set((state) =>
+          updateTableInState(state.tables, state.nodes, tableId, (t) => {
+            const columns = [...t.columns];
+            const [moved] = columns.splice(fromIndex, 1);
+            columns.splice(toIndex, 0, moved);
+            return { ...t, columns };
+          }),
+        );
       },
 
       updateColumnName: (tableId, columnId, name) => {
@@ -333,7 +430,7 @@ export const useSchemaStore = create<SchemaState>()(
           const updatedRelations = [...state.relations, relation];
           return {
             relations: updatedRelations,
-            edges: buildEdgesFromRelations(updatedRelations),
+            edges: buildEdgesFromRelations(updatedRelations, state.tables),
           };
         });
         return id;
@@ -344,7 +441,7 @@ export const useSchemaStore = create<SchemaState>()(
           const updatedRelations = state.relations.filter((r) => r.id !== relationId);
           return {
             relations: updatedRelations,
-            edges: buildEdgesFromRelations(updatedRelations),
+            edges: buildEdgesFromRelations(updatedRelations, state.tables),
           };
         });
       },
@@ -356,7 +453,7 @@ export const useSchemaStore = create<SchemaState>()(
           );
           return {
             relations: updatedRelations,
-            edges: buildEdgesFromRelations(updatedRelations),
+            edges: buildEdgesFromRelations(updatedRelations, state.tables),
           };
         });
       },
@@ -453,14 +550,14 @@ export const useSchemaStore = create<SchemaState>()(
           tables,
           relations,
           nodes: buildNodesFromTables(tables),
-          edges: buildEdgesFromRelations(relations),
+          edges: buildEdgesFromRelations(relations, tables),
         });
       },
 
       rebuildNodesFromTables: () => {
         set((state) => ({
           nodes: buildNodesFromTables(state.tables),
-          edges: buildEdgesFromRelations(state.relations),
+          edges: buildEdgesFromRelations(state.relations, state.tables),
         }));
       },
     }),

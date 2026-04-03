@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { useSchemaStore } from '@/store/useSchemaStore';
 import { validateSchema } from '@/utils/validate-schema';
+import { Button } from '@/components/ui/button';
+import { ChevronUp, ChevronDown } from 'lucide-react';
 
 export default function ValidationPanel() {
   const tables = useSchemaStore((s) => s.tables);
@@ -40,16 +42,17 @@ export default function ValidationPanel() {
 
   return (
     <div
-      className="absolute bottom-4 left-4 z-10 max-w-sm rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-600 dark:bg-gray-800"
+      className="absolute bottom-4 left-4 z-10 max-w-sm rounded-lg bg-popover/80 backdrop-blur-md shadow-lg ring-1 ring-border"
       data-testid="validation-panel"
     >
-      <button
+      <Button
+        variant="ghost"
         className="flex w-full items-center gap-2 px-3 py-2 text-xs font-medium"
         onClick={() => setCollapsed(!collapsed)}
         data-testid="validation-toggle"
       >
         {errorCount > 0 && (
-          <span className="rounded bg-red-100 px-1.5 py-0.5 text-red-700 dark:bg-red-900 dark:text-red-300">
+          <span className="animate-badge-pulse rounded bg-destructive/10 px-1.5 py-0.5 text-destructive">
             {errorCount} error{errorCount !== 1 ? 's' : ''}
           </span>
         )}
@@ -58,21 +61,23 @@ export default function ValidationPanel() {
             {warnCount} warning{warnCount !== 1 ? 's' : ''}
           </span>
         )}
-        <span className="ml-auto text-gray-400">{collapsed ? '▲' : '▼'}</span>
-      </button>
+        <span className="ml-auto">
+          {collapsed ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
+        </span>
+      </Button>
       {!collapsed && (
-        <div className="max-h-48 overflow-y-auto border-t border-gray-200 dark:border-gray-600">
+        <div className="max-h-48 overflow-y-auto border-t border-border">
           {warnings.map((w, i) => (
             <button
               key={`${w.type}-${w.tableId}-${i}`}
-              className="flex w-full items-start gap-2 px-3 py-1.5 text-left text-xs hover:bg-gray-50 dark:hover:bg-gray-700"
+              className="flex w-full items-start gap-2 px-3 py-1.5 text-left text-xs hover:bg-accent"
               onClick={() => handleWarningClick(w.tableId)}
               data-testid={`warning-${w.type}-${i}`}
             >
-              <span className={w.severity === 'error' ? 'text-red-500' : 'text-yellow-500'}>
+              <span className={w.severity === 'error' ? 'text-destructive' : 'text-yellow-500'}>
                 {w.severity === 'error' ? '●' : '▲'}
               </span>
-              <span className="text-gray-700 dark:text-gray-300">{w.message}</span>
+              <span className="text-foreground">{w.message}</span>
             </button>
           ))}
         </div>

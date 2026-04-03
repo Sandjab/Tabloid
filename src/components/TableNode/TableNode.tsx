@@ -5,6 +5,7 @@ import { useSchemaStore } from '@/store/useSchemaStore';
 import { useInlineEdit } from '@/hooks/useInlineEdit';
 import { makeHandleId } from '@/utils/id';
 import type { TableFlowNode } from '@/types/schema';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import ColumnRow from './ColumnRow';
 import ColorPicker from './ColorPicker';
 import NotesPopover from './NotesPopover';
@@ -18,6 +19,9 @@ const TableNode = memo(function TableNode({ id, data }: NodeProps<TableFlowNode>
 
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const moveColumn = useSchemaStore((s) => s.moveColumn);
 
   const onNameSubmit = useCallback(
     (value: string) => updateTableName(id, value),
@@ -28,7 +32,7 @@ const TableNode = memo(function TableNode({ id, data }: NodeProps<TableFlowNode>
 
   return (
     <div
-      className="min-w-[250px] rounded-lg border border-gray-200 bg-white shadow-md dark:border-gray-700 dark:bg-gray-800"
+      className="min-w-[250px] rounded-lg border border-border bg-popover shadow-md transition-shadow duration-200 hover:shadow-lg"
       data-testid={`table-node-${id}`}
     >
       {/* Header */}
@@ -58,22 +62,38 @@ const TableNode = memo(function TableNode({ id, data }: NodeProps<TableFlowNode>
           </span>
         )}
         <div className="nodrag flex shrink-0 items-center gap-0.5">
-          <button
-            className="rounded px-1 text-xs hover:bg-white/20"
-            onClick={() => setShowColorPicker(!showColorPicker)}
-            title="Table color"
-            data-testid={`color-btn-${id}`}
-          >
-            ●
-          </button>
-          <button
-            className={`rounded px-1 text-xs hover:bg-white/20 ${table.notes ? 'opacity-100' : 'opacity-60'}`}
-            onClick={() => setShowNotes(!showNotes)}
-            title="Notes"
-            data-testid={`notes-btn-${id}`}
-          >
-            ✎
-          </button>
+          <Popover open={showColorPicker} onOpenChange={setShowColorPicker}>
+            <PopoverTrigger
+              className="rounded px-1 text-xs hover:bg-white/20"
+              data-testid={`color-btn-${id}`}
+            >
+              ●
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-auto p-2">
+              <ColorPicker
+                currentColor={table.color ?? '#3b82f6'}
+                onSelect={(color) => {
+                  updateTableColor(id, color);
+                  setShowColorPicker(false);
+                }}
+              />
+            </PopoverContent>
+          </Popover>
+          <Popover open={showNotes} onOpenChange={setShowNotes}>
+            <PopoverTrigger
+              className={`rounded px-1 text-xs hover:bg-white/20 ${table.notes ? 'opacity-100' : 'opacity-60'}`}
+              data-testid={`notes-btn-${id}`}
+            >
+              ✎
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-56">
+              <NotesPopover
+                notes={table.notes ?? ''}
+                onChange={(notes) => updateTableNotes(id, notes || undefined)}
+                onClose={() => setShowNotes(false)}
+              />
+            </PopoverContent>
+          </Popover>
           <button
             className="rounded px-1 hover:bg-white/20"
             onClick={() => addColumn(id)}
@@ -83,45 +103,47 @@ const TableNode = memo(function TableNode({ id, data }: NodeProps<TableFlowNode>
             +
           </button>
         </div>
-        {showColorPicker && (
-          <ColorPicker
-            currentColor={table.color ?? '#3b82f6'}
-            onSelect={(color) => updateTableColor(id, color)}
-            onClose={() => setShowColorPicker(false)}
-          />
-        )}
-        {showNotes && (
-          <NotesPopover
-            notes={table.notes ?? ''}
-            onChange={(notes) => updateTableNotes(id, notes || undefined)}
-            onClose={() => setShowNotes(false)}
-          />
-        )}
       </div>
 
       {/* Columns with per-column handles */}
-      <div className="divide-y divide-gray-100 dark:divide-gray-700">
-        {table.columns.map((column) => (
-          <div key={column.id} className="relative">
-            <ColumnRow tableId={id} column={column} />
+      <div className="divide-y divide-border">
+        {table.columns.map((column, index) => (
+          <div key={column.id} className="group/row relative">
+            <ColumnRow
+              tableId={id}
+              column={column}
+              index={index}
+              isDragging={draggedIndex === index}
+              isDragOver={dragOverIndex === index}
+              dragBelow={draggedIndex !== null && draggedIndex < index}
+              onDragStart={() => setDraggedIndex(index)}
+              onDragEnd={() => {
+                if (draggedIndex !== null && dragOverIndex !== null && draggedIndex !== dragOverIndex) {
+                  moveColumn(id, draggedIndex, dragOverIndex);
+                }
+                setDraggedIndex(null);
+                setDragOverIndex(null);
+              }}
+              onDragOverIndex={setDragOverIndex}
+            />
             <Handle
               type="target"
               position={Position.Left}
               id={makeHandleId(column.id, 'target')}
-              className="!left-0 !h-2.5 !w-2.5 !-translate-x-1/2 !border-2 !border-white !bg-blue-500 opacity-30 hover:opacity-100"
+              className="!left-0 !h-2.5 !w-2.5 !border-2 !border-white !bg-blue-500 !opacity-0 transition-opacity hover:!opacity-100"
               data-testid={`handle-target-${column.id}`}
             />
             <Handle
               type="source"
               position={Position.Right}
               id={makeHandleId(column.id, 'source')}
-              className="!right-0 !h-2.5 !w-2.5 !translate-x-1/2 !border-2 !border-white !bg-blue-500 opacity-30 hover:opacity-100"
+              className="!right-0 !h-2.5 !w-2.5 !border-2 !border-white !bg-blue-500 !opacity-0 transition-opacity hover:!opacity-100"
               data-testid={`handle-source-${column.id}`}
             />
           </div>
         ))}
         {table.columns.length === 0 && (
-          <div className="px-3 py-2 text-xs text-gray-400 italic">
+          <div className="px-3 py-2 text-xs text-muted-foreground italic">
             No columns
           </div>
         )}

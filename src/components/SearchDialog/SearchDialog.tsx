@@ -1,9 +1,16 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { useSchemaStore } from '@/store/useSchemaStore';
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 
 interface SearchDialogProps {
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 interface SearchResult {
@@ -12,7 +19,7 @@ interface SearchResult {
   columnName?: string;
 }
 
-export default function SearchDialog({ onClose }: SearchDialogProps) {
+export default function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
   const [query, setQuery] = useState('');
   const tables = useSchemaStore((s) => s.tables);
   const onNodesChange = useSchemaStore((s) => s.onNodesChange);
@@ -20,8 +27,14 @@ export default function SearchDialog({ onClose }: SearchDialogProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
+    if (open) {
+      // Small delay to let the dialog animate open before focusing
+      const t = setTimeout(() => inputRef.current?.focus(), 50);
+      return () => clearTimeout(t);
+    }
+    // Reset query when dialog closes
+    setQuery('');
+  }, [open]);
 
   const results = useMemo(() => {
     const q = query.toLowerCase().trim();
@@ -61,48 +74,43 @@ export default function SearchDialog({ onClose }: SearchDialogProps) {
         })),
       );
     }
-    onClose();
+    onOpenChange(false);
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50"
-      onClick={onClose}
-      data-testid="search-dialog-backdrop"
-    >
-      <div
-        className="absolute left-1/2 top-24 w-96 -translate-x-1/2 rounded-lg border border-gray-200 bg-white p-3 shadow-xl dark:border-gray-600 dark:bg-gray-800"
-        onClick={(e) => e.stopPropagation()}
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        showCloseButton={false}
+        className="top-24 -translate-y-0 sm:max-w-sm"
         data-testid="search-dialog"
       >
-        <input
+        <DialogTitle className="sr-only">Search tables and columns</DialogTitle>
+        <Input
           ref={inputRef}
-          className="w-full rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
           placeholder="Search tables and columns..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Escape') onClose();
             if (e.key === 'Enter' && results.length > 0) handleSelect(results[0]);
           }}
           data-testid="search-input"
         />
         {results.length > 0 && (
-          <div className="mt-2 max-h-64 overflow-y-auto">
+          <div className="max-h-64 overflow-y-auto -mx-1">
             {results.map((r, i) => (
               <button
                 key={`${r.tableId}-${r.columnName ?? ''}-${i}`}
-                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent"
                 onClick={() => handleSelect(r)}
                 data-testid={`search-result-${i}`}
               >
-                <span className="font-medium text-gray-800 dark:text-gray-200">
+                <span className="font-medium text-foreground">
                   {r.tableName}
                 </span>
                 {r.columnName && (
                   <>
-                    <span className="text-gray-400">.</span>
-                    <span className="text-gray-600 dark:text-gray-400">
+                    <span className="text-muted-foreground">.</span>
+                    <span className="text-muted-foreground">
                       {r.columnName}
                     </span>
                   </>
@@ -112,11 +120,11 @@ export default function SearchDialog({ onClose }: SearchDialogProps) {
           </div>
         )}
         {query && results.length === 0 && (
-          <div className="mt-2 px-2 py-1.5 text-sm text-gray-400 italic">
+          <div className="px-2 py-1.5 text-sm text-muted-foreground italic">
             No results
           </div>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

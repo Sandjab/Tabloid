@@ -9,15 +9,11 @@ const PALETTE = [
 interface ColorPickerProps {
   currentColor: string;
   onSelect: (color: string) => void;
-  onClose: () => void;
 }
 
-const ColorPicker = memo(function ColorPicker({ currentColor, onSelect, onClose }: ColorPickerProps) {
+const ColorPicker = memo(function ColorPicker({ currentColor, onSelect }: ColorPickerProps) {
   return (
-    <div
-      className="nodrag absolute left-0 top-full z-20 mt-1 flex flex-wrap gap-1 rounded-lg border border-gray-200 bg-white p-2 shadow-lg dark:border-gray-600 dark:bg-gray-800"
-      data-testid="color-picker"
-    >
+    <div className="flex flex-wrap gap-1" data-testid="color-picker">
       {PALETTE.map((color) => (
         <button
           key={color}
@@ -26,7 +22,7 @@ const ColorPicker = memo(function ColorPicker({ currentColor, onSelect, onClose 
             backgroundColor: color,
             borderColor: color === currentColor ? 'white' : 'transparent',
           }}
-          onClick={() => { onSelect(color); onClose(); }}
+          onClick={() => onSelect(color)}
           data-testid={`color-option-${color}`}
         />
       ))}

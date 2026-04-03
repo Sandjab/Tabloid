@@ -164,3 +164,47 @@ describe('updateColumnDefault', () => {
     expect(useSchemaStore.getState().tables[0].columns[0].defaultValue).toBeUndefined();
   });
 });
+
+describe('moveColumn', () => {
+  it('moves a column from one index to another', () => {
+    const id = useSchemaStore.getState().addTable({ x: 0, y: 0 });
+    // Table starts with 'id' column at index 0
+    useSchemaStore.getState().addColumn(id); // column_1 at index 1
+    useSchemaStore.getState().addColumn(id); // column_2 at index 2
+    // Order: [id, column_1, column_2]
+
+    useSchemaStore.getState().moveColumn(id, 0, 2);
+    const cols = useSchemaStore.getState().tables[0].columns;
+    expect(cols[0].name).toBe('column_1');
+    expect(cols[1].name).toBe('column_2');
+    expect(cols[2].name).toBe('id');
+
+    // Verify nodes are also updated
+    const nodeCols = useSchemaStore.getState().nodes[0].data.table.columns;
+    expect(nodeCols[0].name).toBe('column_1');
+    expect(nodeCols[2].name).toBe('id');
+  });
+
+  it('does nothing when fromIndex equals toIndex', () => {
+    const id = useSchemaStore.getState().addTable({ x: 0, y: 0 });
+    useSchemaStore.getState().addColumn(id);
+    const before = useSchemaStore.getState().tables[0].columns.map((c) => c.id);
+
+    useSchemaStore.getState().moveColumn(id, 0, 0);
+    const after = useSchemaStore.getState().tables[0].columns.map((c) => c.id);
+    expect(after).toEqual(before);
+  });
+
+  it('moves last column to first position', () => {
+    const id = useSchemaStore.getState().addTable({ x: 0, y: 0 });
+    useSchemaStore.getState().addColumn(id);
+    useSchemaStore.getState().addColumn(id);
+    // Order: [id, column_1, column_2]
+
+    useSchemaStore.getState().moveColumn(id, 2, 0);
+    const cols = useSchemaStore.getState().tables[0].columns;
+    expect(cols[0].name).toBe('column_2');
+    expect(cols[1].name).toBe('id');
+    expect(cols[2].name).toBe('column_1');
+  });
+});
