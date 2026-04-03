@@ -1,0 +1,131 @@
+import { memo, useCallback } from 'react';
+import { useShallow } from 'zustand/react/shallow';
+import { useSchemaStore } from '@/store/useSchemaStore';
+import { useInlineEdit } from '@/hooks/useInlineEdit';
+import { COLUMN_TYPES } from '@/types/schema';
+import type { Column, ColumnType } from '@/types/schema';
+
+interface ColumnRowProps {
+  tableId: string;
+  column: Column;
+}
+
+const ColumnRow = memo(function ColumnRow({ tableId, column }: ColumnRowProps) {
+  const {
+    updateColumnName,
+    updateColumnType,
+    toggleColumnPrimaryKey,
+    toggleColumnNullable,
+    toggleColumnUnique,
+    removeColumn,
+  } = useSchemaStore(
+    useShallow((s) => ({
+      updateColumnName: s.updateColumnName,
+      updateColumnType: s.updateColumnType,
+      toggleColumnPrimaryKey: s.toggleColumnPrimaryKey,
+      toggleColumnNullable: s.toggleColumnNullable,
+      toggleColumnUnique: s.toggleColumnUnique,
+      removeColumn: s.removeColumn,
+    })),
+  );
+
+  const onNameSubmit = useCallback(
+    (value: string) => updateColumnName(tableId, column.id, value),
+    [tableId, column.id, updateColumnName],
+  );
+  const { isEditing, handleSubmit, startEditing, cancelEditing } =
+    useInlineEdit(onNameSubmit);
+
+  return (
+    <div
+      className="nodrag flex items-center gap-1.5 px-3 py-1.5 text-sm"
+      data-testid={`column-row-${column.id}`}
+    >
+      <button
+        className={`w-5 shrink-0 text-center ${
+          column.isPrimaryKey ? 'text-yellow-500' : 'text-gray-300 dark:text-gray-600'
+        }`}
+        onClick={() => toggleColumnPrimaryKey(tableId, column.id)}
+        title="Toggle Primary Key"
+        data-testid={`column-pk-${column.id}`}
+      >
+        {column.isPrimaryKey ? '🔑' : '·'}
+      </button>
+
+      {isEditing ? (
+        <input
+          className="nowheel w-20 rounded border border-gray-300 px-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+          defaultValue={column.name}
+          autoFocus
+          onBlur={(e) => handleSubmit(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handleSubmit(e.currentTarget.value);
+            if (e.key === 'Escape') cancelEditing();
+          }}
+          data-testid={`column-name-input-${column.id}`}
+        />
+      ) : (
+        <span
+          className="w-20 cursor-pointer truncate text-gray-800 dark:text-gray-200"
+          onDoubleClick={startEditing}
+          title={column.name}
+          data-testid={`column-name-${column.id}`}
+        >
+          {column.name}
+        </span>
+      )}
+
+      <select
+        className="nowheel rounded border border-gray-300 bg-transparent px-0.5 text-xs text-gray-600 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300"
+        value={column.type}
+        onChange={(e) =>
+          updateColumnType(tableId, column.id, e.target.value as ColumnType)
+        }
+        data-testid={`column-type-${column.id}`}
+      >
+        {COLUMN_TYPES.map((t) => (
+          <option key={t} value={t}>
+            {t}
+          </option>
+        ))}
+      </select>
+
+      <button
+        className={`shrink-0 text-xs ${
+          !column.isNullable
+            ? 'font-bold text-red-500'
+            : 'text-gray-400 dark:text-gray-500'
+        }`}
+        onClick={() => toggleColumnNullable(tableId, column.id)}
+        title="Toggle NOT NULL"
+        data-testid={`column-nn-${column.id}`}
+      >
+        NN
+      </button>
+
+      <button
+        className={`shrink-0 text-xs ${
+          column.isUnique
+            ? 'font-bold text-purple-500'
+            : 'text-gray-400 dark:text-gray-500'
+        }`}
+        onClick={() => toggleColumnUnique(tableId, column.id)}
+        title="Toggle UNIQUE"
+        data-testid={`column-uq-${column.id}`}
+      >
+        UQ
+      </button>
+
+      <button
+        className="ml-auto shrink-0 text-gray-400 hover:text-red-500"
+        onClick={() => removeColumn(tableId, column.id)}
+        title="Remove column"
+        data-testid={`column-remove-${column.id}`}
+      >
+        ×
+      </button>
+    </div>
+  );
+});
+
+export default ColumnRow;

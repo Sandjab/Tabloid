@@ -1,0 +1,26 @@
+@import "tailwindcss";
+@import "@xyflow/react/dist/style.css";
+
+/* Enable class-based dark mode (Tailwind v4) */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Fix Chromium bug where cursor: grab/grabbing disappears during drag on Windows */
+.react-flow__pane,
+.react-flow__pane.draggable,
+.react-flow__pane.dragging {
+  cursor: default !important;
+}
+
+/* MiniMap styling */
+.react-flow__minimap-mask {
+  fill: rgb(0 0 0 / 0.15);
+}
+.dark .react-flow__minimap {
+  background-color: #1f2937;
+}
+.dark .react-flow__minimap-mask {
+  fill: rgb(255 255 255 / 0.15);
+}
+.dark .react-flow__minimap-node {
+  fill: #60a5fa;
+}
