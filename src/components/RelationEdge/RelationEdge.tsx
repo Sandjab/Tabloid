@@ -79,7 +79,7 @@ const RelationEdge = memo(function RelationEdge({
     : 0.3 + (bundleIndex / (bundleCount - 1)) * 0.4;
 
   const sx = sourceX;
-  const tx = targetX + 10;
+  const tx = targetX + 3;
 
   const turnX = sx + (tx - sx) * stepPosition + spreadOffset;
 
