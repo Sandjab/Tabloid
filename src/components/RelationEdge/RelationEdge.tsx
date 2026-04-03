@@ -127,7 +127,7 @@ const RelationEdge = memo(function RelationEdge({
       />
       <EdgeLabelRenderer>
         <div
-          className="nodrag nopan pointer-events-auto absolute rounded bg-white px-1 py-0.5 text-[10px] font-medium text-gray-600 shadow-sm dark:bg-gray-700 dark:text-gray-300"
+          className="nodrag nopan pointer-events-auto absolute rounded bg-white px-1 py-0.5 text-[8px] font-medium text-gray-600 shadow-sm dark:bg-gray-700 dark:text-gray-300"
           style={{
             transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
           }}
