@@ -8,15 +8,17 @@ Pas de backend. Pas de compte. Ouvrez et concevez.
 
 - **Canvas infini** — déplacez-vous, zoomez et organisez votre schéma librement
 - **Éditeur de tables visuel** — créez des tables, ajoutez des colonnes, définissez types et contraintes en ligne
-- **Types abstraits** — modélisez avec des types agnostiques du SGBD (TEXT, INTEGER, UUID, JSON…) et exportez vers le dialecte de votre choix
+- **Types abstraits** — modélisez avec des types agnostiques du SGBD (TEXT, INTEGER, UUID, JSON...) et exportez vers le dialecte de votre choix
 - **Export SQL multi-dialecte** — génération de `CREATE TABLE` pour PostgreSQL, MySQL, SQLite, Oracle ou SQL Server
-- **Relations par glisser-déposer** — reliez les colonnes entre tables avec des relations one-to-one, one-to-many ou many-to-many, affichées en notation crow’s foot
+- **Relations par glisser-déposer** — reliez les colonnes entre tables avec des relations one-to-one, one-to-many ou many-to-many, affichées en notation crow's foot
 - **Auto-arrangement** — disposez automatiquement vos tables pour plus de lisibilité
-- **Export JSON / YAML** — sérialisation complète du schéma pour intégration avec d’autres outils
+- **Export JSON / YAML** — sérialisation complète du schéma pour intégration avec d'autres outils
 - **Export image** — téléchargez votre schéma en PNG ou SVG
-- **Import** — chargez un fichier `.tabloid.json` sauvegardé pour reprendre l’édition
+- **Export Mermaid** — diagramme ER en syntaxe Mermaid, intégrable directement dans un README GitHub
+- **Export Excalidraw** — fichier `.excalidraw` pour continuer l'édition dans Excalidraw
+- **Import** — chargez un fichier `.tabloid.json` sauvegardé pour reprendre l'édition
 - **Sauvegarde automatique locale** — votre travail est persisté dans le navigateur
-- **Mode sombre** — parce que c’est indispensable
+- **Mode sombre** — parce que c'est indispensable
 - **Annuler / Rétablir** — Ctrl+Z / Ctrl+Shift+Z
 
 ## Démarrage rapide
@@ -32,42 +34,42 @@ Ouvrez `http://localhost:5173` et commencez à concevoir.
 
 ## Stack technique
 
-|Couche     |Technologie                      |
-|-----------|---------------------------------|
-|Interface  |React 18 + TypeScript            |
-|Canvas     |React Flow (`@xyflow/react`)     |
-|État       |Zustand                          |
-|Styling    |Tailwind CSS                     |
-|Build      |Vite                             |
-|Tests      |Vitest + Playwright              |
-|Déploiement|GitHub Pages (via GitHub Actions)|
+| Couche | Technologie |
+|--------|-------------|
+| Interface | React 18 + TypeScript |
+| Canvas | React Flow (`@xyflow/react`) |
+| État | Zustand |
+| Styling | Tailwind CSS |
+| Build | Vite |
+| Tests | Vitest + Playwright |
+| Déploiement | GitHub Pages (via GitHub Actions) |
 
 ## Raccourcis clavier
 
-|Raccourci                |Action                     |
-|-------------------------|---------------------------|
-|`Ctrl + Z`               |Annuler                    |
-|`Ctrl + Shift + Z`       |Rétablir                   |
-|`Suppr`                  |Supprimer la sélection     |
-|`Ctrl + A`               |Tout sélectionner          |
-|`Ctrl + D`               |Dupliquer la sélection     |
-|`Ctrl + S`               |Sauvegarder dans un fichier|
-|`Ctrl + +/-`             |Zoom avant/arrière         |
-|Double-clic sur le canvas|Créer une nouvelle table   |
+| Action | Windows / Linux | macOS |
+|--------|----------------|-------|
+| Annuler | `Ctrl + Z` | `⌘ + Z` |
+| Rétablir | `Ctrl + Y` | `⌘ + Shift + Z` |
+| Supprimer la sélection | `Suppr` | `⌫` (Backspace) |
+| Tout sélectionner | `Ctrl + A` | `⌘ + A` |
+| Dupliquer la sélection | `Ctrl + D` | `⌘ + D` |
+| Sauvegarder dans un fichier | `Ctrl + S` | `⌘ + S` |
+| Zoom avant/arrière | `Ctrl + +/-` | `⌘ + +/-` |
+| Créer une nouvelle table | Double-clic sur le canvas | Double-clic sur le canvas |
 
 ## Types abstraits & dialectes SQL
 
-Tabloid utilise un système de **types abstraits** indépendants du SGBD (TEXT, INTEGER, BOOLEAN, UUID, JSON, SERIAL…). Le mapping vers les types natifs se fait automatiquement à l’export selon le dialecte choisi :
+Tabloid utilise un système de **types abstraits** indépendants du SGBD (TEXT, INTEGER, BOOLEAN, UUID, JSON, SERIAL...). Le mapping vers les types natifs se fait automatiquement à l'export selon le dialecte choisi :
 
-|Dialectes supportés|
-|-------------------|
-|PostgreSQL         |
-|MySQL              |
-|SQLite             |
-|Oracle             |
-|SQL Server         |
+| Dialectes supportés |
+|---------------------|
+| PostgreSQL |
+| MySQL |
+| SQLite |
+| Oracle |
+| SQL Server |
 
-## Formats d’export
+## Formats d'export
 
 ### SQL (exemple PostgreSQL)
 
