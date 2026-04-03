@@ -14,10 +14,6 @@
   cursor: default !important;
 }
 
-/* Canvas background — warm tint instead of pure white */
-.react-flow__background {
-  opacity: 0.5;
-}
 
 /* MiniMap styling */
 .react-flow__minimap-mask {
@@ -102,7 +98,7 @@
 }
 
 :root {
-  --background: oklch(0.993 0.003 80);
+  --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
