@@ -159,7 +159,7 @@ export default function Canvas({ onSearchOpen }: CanvasProps) {
         <MiniMap
           pannable
           zoomable
-          nodeColor="#93c5fd"
+          nodeColor={(node) => node.data?.table?.color ?? '#3b82f6'}
           data-testid="minimap"
         />
         <div className="absolute -bottom-[1px] right-[73px] text-[10px] text-gray-400 dark:text-gray-600">
