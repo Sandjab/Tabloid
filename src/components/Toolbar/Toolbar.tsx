@@ -2,7 +2,6 @@ import { useCallback, useRef } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { useSchemaStore } from '@/store/useSchemaStore';
 import { useUndoRedo } from '@/hooks/useUndoRedo';
-import { useTheme } from '@/hooks/useTheme';
 import { computeAutoLayout } from '@/utils/auto-layout';
 import { importJSON } from '@/utils/import-json';
 import { Button } from '@/components/ui/button';
@@ -15,8 +14,6 @@ import {
   Download,
   Upload,
   Search,
-  Moon,
-  Sun,
 } from 'lucide-react';
 
 interface ToolbarProps {
@@ -29,7 +26,6 @@ export default function Toolbar({ onSearchOpen, onExportOpen }: ToolbarProps) {
   const loadSchema = useSchemaStore((s) => s.loadSchema);
   const { screenToFlowPosition, fitView } = useReactFlow();
   const { undo, redo, canUndo, canRedo } = useUndoRedo();
-  const { theme, toggleTheme } = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleAddTable = useCallback(() => {
@@ -166,15 +162,6 @@ export default function Toolbar({ onSearchOpen, onExportOpen }: ToolbarProps) {
         <Search />
       </Button>
 
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        onClick={toggleTheme}
-        title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-        data-testid="theme-toggle-btn"
-      >
-        {theme === 'light' ? <Moon /> : <Sun />}
-      </Button>
     </div>
   );
 }

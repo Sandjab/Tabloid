@@ -57,7 +57,7 @@ export default function ValidationPanel() {
           </span>
         )}
         {warnCount > 0 && (
-          <span className="rounded bg-yellow-100 px-1.5 py-0.5 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300">
+          <span className="rounded bg-yellow-100 px-1.5 py-0.5 text-yellow-700">
             {warnCount} warning{warnCount !== 1 ? 's' : ''}
           </span>
         )}

@@ -162,7 +162,7 @@ export default function Canvas({ onSearchOpen }: CanvasProps) {
           nodeColor={(node) => node.data?.table?.color ?? '#3b82f6'}
           data-testid="minimap"
         />
-        <div className="absolute -bottom-[1px] right-[73px] text-[10px] text-gray-400 dark:text-gray-600">
+        <div className="absolute -bottom-[1px] right-[73px] text-[10px] text-gray-400">
           Proudly clauded by JP GAVINI 04/2026
         </div>
       </ReactFlow>
