@@ -8,6 +8,21 @@ import { exportMermaid } from '@/utils/export-mermaid';
 import { exportExcalidraw } from '@/utils/export-excalidraw';
 import { exportPNG, exportSVG } from '@/utils/export-image';
 import { downloadText } from '@/utils/download';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 
 type ExportFormat = 'sql' | 'json' | 'yaml' | 'mermaid' | 'excalidraw' | 'png' | 'svg';
 
@@ -22,10 +37,11 @@ const FORMATS: { value: ExportFormat; label: string }[] = [
 ];
 
 interface ExportDialogProps {
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-export default function ExportDialog({ onClose }: ExportDialogProps) {
+export default function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
   const [format, setFormat] = useState<ExportFormat>('sql');
   const [dialect, setDialect] = useState('postgresql');
 
@@ -78,90 +94,82 @@ export default function ExportDialog({ onClose }: ExportDialogProps) {
         await exportSVG('schema.svg');
         break;
     }
-    onClose();
+    onOpenChange(false);
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50"
-      onClick={onClose}
-      data-testid="export-dialog-backdrop"
-    >
-      <div
-        className="absolute left-1/2 top-1/2 flex w-[600px] max-w-[90vw] -translate-x-1/2 -translate-y-1/2 flex-col rounded-lg border border-gray-200 bg-white shadow-xl dark:border-gray-600 dark:bg-gray-800"
-        onClick={(e) => e.stopPropagation()}
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className="sm:max-w-[600px]"
         data-testid="export-dialog"
       >
-        <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-600">
-          <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-            Export Schema
-          </h2>
-          <button
-            className="text-gray-400 hover:text-gray-600"
-            onClick={onClose}
-          >
-            ×
-          </button>
-        </div>
+        <DialogHeader>
+          <DialogTitle>Export Schema</DialogTitle>
+        </DialogHeader>
 
-        <div className="flex gap-3 border-b border-gray-200 px-4 py-3 dark:border-gray-600">
+        <div className="flex items-center gap-3">
           <div className="flex flex-wrap gap-1.5">
             {FORMATS.map((f) => (
-              <button
+              <Button
                 key={f.value}
-                className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-                  format === f.value
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300'
-                }`}
+                variant={format === f.value ? 'default' : 'secondary'}
+                size="xs"
                 onClick={() => setFormat(f.value)}
                 data-testid={`export-format-${f.value}`}
               >
                 {f.label}
-              </button>
+              </Button>
             ))}
           </div>
           {format === 'sql' && (
-            <select
-              className="rounded border border-gray-300 px-2 py-1 text-xs dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300"
+            <Select
               value={dialect}
-              onChange={(e) => setDialect(e.target.value)}
-              data-testid="export-dialect-select"
+              onValueChange={(val) => { if (val) setDialect(val); }}
             >
-              {DIALECT_NAMES.map((d) => (
-                <option key={d} value={d}>
-                  {d.charAt(0).toUpperCase() + d.slice(1)}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger
+                size="sm"
+                data-testid="export-dialect-select"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {DIALECT_NAMES.map((d) => (
+                  <SelectItem key={d} value={d}>
+                    {d.charAt(0).toUpperCase() + d.slice(1)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
         </div>
 
-        <div className="max-h-[50vh] overflow-auto px-4 py-3">
-          <pre className="whitespace-pre-wrap rounded bg-gray-50 p-3 text-xs text-gray-700 dark:bg-gray-900 dark:text-gray-300" data-testid="export-preview">
+        <div className="max-h-[50vh] overflow-auto">
+          <pre
+            className="whitespace-pre-wrap rounded-md bg-muted p-3 text-xs text-muted-foreground"
+            data-testid="export-preview"
+          >
             {preview}
           </pre>
         </div>
 
-        <div className="flex justify-end gap-2 border-t border-gray-200 px-4 py-3 dark:border-gray-600">
+        <DialogFooter>
           {format !== 'png' && format !== 'svg' && (
-            <button
-              className="rounded px-3 py-1.5 text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+            <Button
+              variant="outline"
               onClick={handleCopy}
               data-testid="export-copy-btn"
             >
               Copy
-            </button>
+            </Button>
           )}
-          <button
-            className="rounded bg-blue-500 px-3 py-1.5 text-sm text-white hover:bg-blue-600"
+          <Button
             onClick={handleDownload}
             data-testid="export-download-btn"
           >
             Download
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

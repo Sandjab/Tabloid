@@ -1,8 +1,17 @@
 import { useState } from 'react';
 import { RELATION_TYPE_LABELS } from '@/types/schema';
 import type { RelationType } from '@/types/schema';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 interface RelationTypeDialogProps {
+  open: boolean;
   onConfirm: (type: RelationType) => void;
   onCancel: () => void;
 }
@@ -12,30 +21,24 @@ const RELATION_OPTIONS = (
 ).map(([value, labels]) => ({ value, label: labels.long }));
 
 export default function RelationTypeDialog({
+  open,
   onConfirm,
   onCancel,
 }: RelationTypeDialogProps) {
   const [selected, setSelected] = useState<RelationType>('one-to-many');
 
   return (
-    <div
-      className="fixed inset-0 z-50"
-      onClick={onCancel}
-      data-testid="relation-dialog-backdrop"
-    >
-      <div
-        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-lg border border-gray-200 bg-white p-3 shadow-xl dark:border-gray-600 dark:bg-gray-800"
-        onClick={(e) => e.stopPropagation()}
-        data-testid="relation-type-dialog"
-      >
-        <div className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
-          Relation Type
-        </div>
+    <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onCancel(); }}>
+      <DialogContent data-testid="relation-type-dialog">
+        <DialogHeader>
+          <DialogTitle>Relation Type</DialogTitle>
+        </DialogHeader>
+
         <div className="flex flex-col gap-1">
           {RELATION_OPTIONS.map((opt) => (
             <label
               key={opt.value}
-              className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent"
             >
               <input
                 type="radio"
@@ -45,29 +48,29 @@ export default function RelationTypeDialog({
                 onChange={() => setSelected(opt.value)}
                 data-testid={`relation-option-${opt.value}`}
               />
-              <span className="text-gray-700 dark:text-gray-300">
+              <span className="text-foreground">
                 {opt.label}
               </span>
             </label>
           ))}
         </div>
-        <div className="mt-3 flex justify-end gap-2">
-          <button
-            className="rounded px-3 py-1 text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+
+        <DialogFooter>
+          <Button
+            variant="outline"
             onClick={onCancel}
             data-testid="relation-cancel-btn"
           >
             Cancel
-          </button>
-          <button
-            className="rounded bg-blue-500 px-3 py-1 text-sm text-white hover:bg-blue-600"
+          </Button>
+          <Button
             onClick={() => onConfirm(selected)}
             data-testid="relation-confirm-btn"
           >
             Create
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

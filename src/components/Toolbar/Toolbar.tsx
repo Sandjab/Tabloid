@@ -5,6 +5,19 @@ import { useUndoRedo } from '@/hooks/useUndoRedo';
 import { useTheme } from '@/hooks/useTheme';
 import { computeAutoLayout } from '@/utils/auto-layout';
 import { importJSON } from '@/utils/import-json';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import {
+  Plus,
+  Undo2,
+  Redo2,
+  LayoutGrid,
+  Download,
+  Upload,
+  Search,
+  Moon,
+  Sun,
+} from 'lucide-react';
 
 interface ToolbarProps {
   onSearchOpen: () => void;
@@ -59,77 +72,79 @@ export default function Toolbar({ onSearchOpen, onExportOpen }: ToolbarProps) {
     [loadSchema, fitView],
   );
 
-  const btnClass =
-    'rounded px-2.5 py-1.5 text-sm font-medium transition-colors';
-  const btnDefault =
-    `${btnClass} bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600`;
-  const btnDisabled =
-    `${btnClass} bg-gray-50 text-gray-300 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600`;
-
   return (
     <div
-      className="absolute left-4 top-4 z-10 flex items-center gap-1.5 rounded-lg bg-white p-1.5 shadow-lg dark:bg-gray-800"
+      className="absolute left-4 top-4 z-10 flex items-center gap-1 rounded-lg bg-popover p-1 shadow-lg ring-1 ring-border"
       data-testid="toolbar"
     >
-      <button
-        className={`${btnClass} bg-blue-500 text-white hover:bg-blue-600`}
+      <Button
+        size="sm"
         onClick={handleAddTable}
         data-testid="add-table-btn"
         title="Add Table"
       >
-        + Table
-      </button>
+        <Plus className="size-3.5" />
+        Table
+      </Button>
 
-      <div className="mx-0.5 h-6 w-px bg-gray-200 dark:bg-gray-600" />
+      <Separator orientation="vertical" className="mx-0.5 h-6" />
 
-      <button
-        className={canUndo ? btnDefault : btnDisabled}
+      <Button
+        variant="ghost"
+        size="icon-sm"
         onClick={undo}
         disabled={!canUndo}
         title="Undo (Ctrl+Z)"
         data-testid="undo-btn"
       >
-        ↶
-      </button>
-      <button
-        className={canRedo ? btnDefault : btnDisabled}
+        <Undo2 />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon-sm"
         onClick={redo}
         disabled={!canRedo}
         title="Redo (Ctrl+Y)"
         data-testid="redo-btn"
       >
-        ↷
-      </button>
+        <Redo2 />
+      </Button>
 
-      <div className="mx-0.5 h-6 w-px bg-gray-200 dark:bg-gray-600" />
+      <Separator orientation="vertical" className="mx-0.5 h-6" />
 
-      <button
-        className={btnDefault}
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={handleAutoLayout}
         title="Auto-arrange tables"
         data-testid="auto-layout-btn"
       >
-        ⊞ Layout
-      </button>
+        <LayoutGrid className="size-3.5" />
+        Layout
+      </Button>
 
-      <div className="mx-0.5 h-6 w-px bg-gray-200 dark:bg-gray-600" />
+      <Separator orientation="vertical" className="mx-0.5 h-6" />
 
-      <button
-        className={btnDefault}
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={onExportOpen}
         title="Export schema"
         data-testid="export-btn"
       >
-        ↓ Export
-      </button>
-      <button
-        className={btnDefault}
+        <Download className="size-3.5" />
+        Export
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={handleImport}
         title="Import .tabloid.json"
         data-testid="import-btn"
       >
-        ↑ Import
-      </button>
+        <Upload className="size-3.5" />
+        Import
+      </Button>
       <input
         ref={fileInputRef}
         type="file"
@@ -139,25 +154,27 @@ export default function Toolbar({ onSearchOpen, onExportOpen }: ToolbarProps) {
         data-testid="import-file-input"
       />
 
-      <div className="mx-0.5 h-6 w-px bg-gray-200 dark:bg-gray-600" />
+      <Separator orientation="vertical" className="mx-0.5 h-6" />
 
-      <button
-        className={btnDefault}
+      <Button
+        variant="ghost"
+        size="icon-sm"
         onClick={onSearchOpen}
         title="Search (Ctrl+F)"
         data-testid="search-btn"
       >
-        🔍
-      </button>
+        <Search />
+      </Button>
 
-      <button
-        className={btnDefault}
+      <Button
+        variant="ghost"
+        size="icon-sm"
         onClick={toggleTheme}
         title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
         data-testid="theme-toggle-btn"
       >
-        {theme === 'light' ? '🌙' : '☀️'}
-      </button>
+        {theme === 'light' ? <Moon /> : <Sun />}
+      </Button>
     </div>
   );
 }

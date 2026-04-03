@@ -166,12 +166,11 @@ export default function Canvas({ onSearchOpen }: CanvasProps) {
           Proudly clauded by JP GAVINI 04/2026
         </div>
       </ReactFlow>
-      {pendingConnection && (
-        <RelationTypeDialog
-          onConfirm={handleRelationConfirm}
-          onCancel={handleRelationCancel}
-        />
-      )}
+      <RelationTypeDialog
+        open={!!pendingConnection}
+        onConfirm={handleRelationConfirm}
+        onCancel={handleRelationCancel}
+      />
     </div>
   );
 }
