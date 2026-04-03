@@ -37,6 +37,7 @@ export interface SchemaState {
 
   addColumn: (tableId: string) => void;
   removeColumn: (tableId: string, columnId: string) => void;
+  moveColumn: (tableId: string, fromIndex: number, toIndex: number) => void;
   updateColumnName: (tableId: string, columnId: string, name: string) => void;
   updateColumnType: (tableId: string, columnId: string, type: ColumnType) => void;
   toggleColumnPrimaryKey: (tableId: string, columnId: string) => void;
@@ -257,6 +258,18 @@ export const useSchemaStore = create<SchemaState>()(
             edges: buildEdgesFromRelations(updatedRelations),
           };
         });
+      },
+
+      moveColumn: (tableId, fromIndex, toIndex) => {
+        if (fromIndex === toIndex) return;
+        set((state) =>
+          updateTableInState(state.tables, state.nodes, tableId, (t) => {
+            const columns = [...t.columns];
+            const [moved] = columns.splice(fromIndex, 1);
+            columns.splice(toIndex, 0, moved);
+            return { ...t, columns };
+          }),
+        );
       },
 
       updateColumnName: (tableId, columnId, name) => {

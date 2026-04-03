@@ -4,13 +4,29 @@ import { useSchemaStore } from '@/store/useSchemaStore';
 import { useInlineEdit } from '@/hooks/useInlineEdit';
 import { COLUMN_TYPES } from '@/types/schema';
 import type { Column, ColumnType } from '@/types/schema';
+import { GripVertical } from 'lucide-react';
 
 interface ColumnRowProps {
   tableId: string;
   column: Column;
+  index: number;
+  isDragging: boolean;
+  isDragOver: boolean;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+  onDragOverIndex: (index: number) => void;
 }
 
-const ColumnRow = memo(function ColumnRow({ tableId, column }: ColumnRowProps) {
+const ColumnRow = memo(function ColumnRow({
+  tableId,
+  column,
+  index,
+  isDragging,
+  isDragOver,
+  onDragStart,
+  onDragEnd,
+  onDragOverIndex,
+}: ColumnRowProps) {
   const {
     updateColumnName,
     updateColumnType,
@@ -38,9 +54,30 @@ const ColumnRow = memo(function ColumnRow({ tableId, column }: ColumnRowProps) {
 
   return (
     <div
-      className="nodrag flex items-center gap-1.5 px-3 py-1.5 text-sm"
+      className={`nodrag flex items-center gap-1.5 px-3 py-1.5 text-sm ${
+        isDragging ? 'opacity-30' : ''
+      } ${isDragOver && !isDragging ? 'ring-t-2 ring-inset border-t-2 border-primary' : ''}`}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        onDragOverIndex(index);
+      }}
+      onDrop={(e) => e.preventDefault()}
       data-testid={`column-row-${column.id}`}
     >
+      <div
+        className="shrink-0 cursor-grab text-muted-foreground hover:text-foreground"
+        draggable
+        onDragStart={(e) => {
+          e.dataTransfer.effectAllowed = 'move';
+          onDragStart();
+        }}
+        onDragEnd={onDragEnd}
+        data-testid={`column-drag-handle-${column.id}`}
+      >
+        <GripVertical className="size-3.5" />
+      </div>
+
       <button
         className={`w-5 shrink-0 text-center ${
           column.isPrimaryKey ? 'text-yellow-500' : 'text-gray-300 dark:text-gray-600'
@@ -54,7 +91,7 @@ const ColumnRow = memo(function ColumnRow({ tableId, column }: ColumnRowProps) {
 
       {isEditing ? (
         <input
-          className="nowheel w-20 rounded border border-gray-300 px-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+          className="nowheel w-20 rounded border border-input px-1 text-sm"
           defaultValue={column.name}
           autoFocus
           onBlur={(e) => handleSubmit(e.target.value)}
@@ -66,7 +103,7 @@ const ColumnRow = memo(function ColumnRow({ tableId, column }: ColumnRowProps) {
         />
       ) : (
         <span
-          className="w-20 cursor-pointer truncate text-gray-800 dark:text-gray-200"
+          className="w-20 cursor-pointer truncate text-foreground"
           onDoubleClick={startEditing}
           title={column.name}
           data-testid={`column-name-${column.id}`}
@@ -76,7 +113,7 @@ const ColumnRow = memo(function ColumnRow({ tableId, column }: ColumnRowProps) {
       )}
 
       <select
-        className="nowheel rounded border border-gray-300 bg-transparent px-0.5 text-xs text-gray-600 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300"
+        className="nowheel rounded border border-input bg-transparent px-0.5 text-xs text-muted-foreground"
         value={column.type}
         onChange={(e) =>
           updateColumnType(tableId, column.id, e.target.value as ColumnType)
@@ -94,7 +131,7 @@ const ColumnRow = memo(function ColumnRow({ tableId, column }: ColumnRowProps) {
         className={`shrink-0 text-xs ${
           !column.isNullable
             ? 'font-bold text-red-500'
-            : 'text-gray-400 dark:text-gray-500'
+            : 'text-muted-foreground'
         }`}
         onClick={() => toggleColumnNullable(tableId, column.id)}
         title="Toggle NOT NULL"
@@ -107,7 +144,7 @@ const ColumnRow = memo(function ColumnRow({ tableId, column }: ColumnRowProps) {
         className={`shrink-0 text-xs ${
           column.isUnique
             ? 'font-bold text-purple-500'
-            : 'text-gray-400 dark:text-gray-500'
+            : 'text-muted-foreground'
         }`}
         onClick={() => toggleColumnUnique(tableId, column.id)}
         title="Toggle UNIQUE"
@@ -117,7 +154,7 @@ const ColumnRow = memo(function ColumnRow({ tableId, column }: ColumnRowProps) {
       </button>
 
       <button
-        className="ml-auto shrink-0 text-gray-400 hover:text-red-500"
+        className="ml-auto shrink-0 text-muted-foreground hover:text-destructive"
         onClick={() => removeColumn(tableId, column.id)}
         title="Remove column"
         data-testid={`column-remove-${column.id}`}

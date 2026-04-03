@@ -69,6 +69,19 @@ describe('undo/redo', () => {
     expect(useSchemaStore.getState().edges).toHaveLength(0);
   });
 
+  it('undoes moveColumn', () => {
+    const id = useSchemaStore.getState().addTable({ x: 0, y: 0 });
+    useSchemaStore.getState().addColumn(id);
+    useSchemaStore.getState().addColumn(id);
+    const originalOrder = useSchemaStore.getState().tables[0].columns.map((c) => c.name);
+
+    useSchemaStore.getState().moveColumn(id, 0, 2);
+    expect(useSchemaStore.getState().tables[0].columns.map((c) => c.name)).not.toEqual(originalOrder);
+
+    undoAndRebuild();
+    expect(useSchemaStore.getState().tables[0].columns.map((c) => c.name)).toEqual(originalOrder);
+  });
+
   it('undoes column changes', () => {
     const id = useSchemaStore.getState().addTable({ x: 0, y: 0 });
     const colId = useSchemaStore.getState().tables[0].columns[0].id;

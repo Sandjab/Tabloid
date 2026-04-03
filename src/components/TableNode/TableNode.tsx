@@ -19,6 +19,9 @@ const TableNode = memo(function TableNode({ id, data }: NodeProps<TableFlowNode>
 
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const moveColumn = useSchemaStore((s) => s.moveColumn);
 
   const onNameSubmit = useCallback(
     (value: string) => updateTableName(id, value),
@@ -104,9 +107,24 @@ const TableNode = memo(function TableNode({ id, data }: NodeProps<TableFlowNode>
 
       {/* Columns with per-column handles */}
       <div className="divide-y divide-border">
-        {table.columns.map((column) => (
+        {table.columns.map((column, index) => (
           <div key={column.id} className="relative">
-            <ColumnRow tableId={id} column={column} />
+            <ColumnRow
+              tableId={id}
+              column={column}
+              index={index}
+              isDragging={draggedIndex === index}
+              isDragOver={dragOverIndex === index}
+              onDragStart={() => setDraggedIndex(index)}
+              onDragEnd={() => {
+                if (draggedIndex !== null && dragOverIndex !== null && draggedIndex !== dragOverIndex) {
+                  moveColumn(id, draggedIndex, dragOverIndex);
+                }
+                setDraggedIndex(null);
+                setDragOverIndex(null);
+              }}
+              onDragOverIndex={setDragOverIndex}
+            />
             <Handle
               type="target"
               position={Position.Left}
