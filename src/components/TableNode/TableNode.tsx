@@ -7,6 +7,17 @@ import { makeHandleId } from '@/utils/id';
 import type { TableFlowNode } from '@/types/schema';
 import { useTableHighlight } from '@/hooks/useHighlight';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
+import { Plus, Copy, Pencil, StickyNote, Trash2, Palette } from 'lucide-react';
 import ColumnRow from './ColumnRow';
 import ColorPicker from './ColorPicker';
 import NotesPopover from './NotesPopover';
@@ -17,6 +28,8 @@ const TableNode = memo(function TableNode({ id, data, selected }: NodeProps<Tabl
   const addColumn = useSchemaStore((s) => s.addColumn);
   const updateTableColor = useSchemaStore((s) => s.updateTableColor);
   const updateTableNotes = useSchemaStore((s) => s.updateTableNotes);
+  const removeTable = useSchemaStore((s) => s.removeTable);
+  const duplicateTable = useSchemaStore((s) => s.duplicateTable);
 
   const highlight = useTableHighlight(id);
 
@@ -61,6 +74,8 @@ const TableNode = memo(function TableNode({ id, data, selected }: NodeProps<Tabl
       data-testid={`table-node-${id}`}
     >
       {/* Header */}
+      <ContextMenu>
+      <ContextMenuTrigger asChild>
       <div
         className="relative flex items-center justify-between rounded-t-md px-3 py-1.5 text-white"
         style={{ backgroundColor: table.color ?? '#3b82f6' }}
@@ -136,6 +151,48 @@ const TableNode = memo(function TableNode({ id, data, selected }: NodeProps<Tabl
           </button>
         </div>
       </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent className="w-48" data-testid={`table-context-menu-${id}`}>
+        <ContextMenuItem onClick={startEditing} data-testid={`ctx-rename-${id}`}>
+          <Pencil className="mr-2 size-3.5" />
+          Rename table
+        </ContextMenuItem>
+        <ContextMenuItem onClick={() => addColumn(id)} data-testid={`ctx-add-column-${id}`}>
+          <Plus className="mr-2 size-3.5" />
+          Add column
+        </ContextMenuItem>
+        <ContextMenuItem onClick={() => duplicateTable(id)} data-testid={`ctx-duplicate-${id}`}>
+          <Copy className="mr-2 size-3.5" />
+          Duplicate table
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuSub>
+          <ContextMenuSubTrigger data-testid={`ctx-color-${id}`}>
+            <Palette className="mr-2 size-3.5" />
+            Color
+          </ContextMenuSubTrigger>
+          <ContextMenuSubContent className="p-2">
+            <ColorPicker
+              currentColor={table.color ?? '#3b82f6'}
+              onSelect={(color) => updateTableColor(id, color)}
+            />
+          </ContextMenuSubContent>
+        </ContextMenuSub>
+        <ContextMenuItem onClick={() => setShowNotes(true)} data-testid={`ctx-notes-${id}`}>
+          <StickyNote className="mr-2 size-3.5" />
+          {table.notes ? 'Edit notes' : 'Add note'}
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem
+          onClick={() => removeTable(id)}
+          className="text-destructive focus:text-destructive"
+          data-testid={`ctx-delete-${id}`}
+        >
+          <Trash2 className="mr-2 size-3.5" />
+          Delete table
+        </ContextMenuItem>
+      </ContextMenuContent>
+      </ContextMenu>
 
       {/* Columns with per-column handles */}
       <div className="divide-y divide-border">

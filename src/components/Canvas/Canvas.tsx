@@ -11,6 +11,15 @@ import type { NodeTypes, EdgeTypes, Connection, IsValidConnection } from '@xyflo
 import { useSchemaStore } from '@/store/useSchemaStore';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { parseHandleId } from '@/utils/id';
+import { computeAutoLayout } from '@/utils/auto-layout';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
+import { Plus, Maximize, LayoutGrid, MousePointerClick } from 'lucide-react';
 import TableNode from '@/components/TableNode/TableNode';
 import RelationEdge from '@/components/RelationEdge/RelationEdge';
 import CrowFootMarkers from '@/components/RelationEdge/CrowFootMarkers';
@@ -47,11 +56,40 @@ export default function Canvas({ onSearchOpen }: CanvasProps) {
   const addTable = useSchemaStore((s) => s.addTable);
   const addRelation = useSchemaStore((s) => s.addRelation);
   const removeRelation = useSchemaStore((s) => s.removeRelation);
-  const { screenToFlowPosition, setCenter, getZoom } = useReactFlow();
+  const { screenToFlowPosition, setCenter, getZoom, fitView } = useReactFlow();
 
   const lastPaneClickTime = useRef(0);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const contextMenuPos = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const [pendingConnection, setPendingConnection] = useState<PendingConnection | null>(null);
+
+  const handleAddTableHere = useCallback(() => {
+    const position = screenToFlowPosition(contextMenuPos.current);
+    addTable(position);
+  }, [screenToFlowPosition, addTable]);
+
+  const handleAutoLayout = useCallback(() => {
+    const { tables, relations, updateTablePositions } = useSchemaStore.getState();
+    if (tables.length === 0) return;
+    const positions = computeAutoLayout(tables, relations);
+    updateTablePositions(positions);
+    fitView({ padding: 0.2, duration: 300 });
+  }, [fitView]);
+
+  const handleFitView = useCallback(() => {
+    fitView({ padding: 0.2, duration: 300 });
+  }, [fitView]);
+
+  const handleSelectAll = useCallback(() => {
+    const { nodes: allNodes } = useSchemaStore.getState();
+    onNodesChange(
+      allNodes.map((n) => ({
+        type: 'select' as const,
+        id: n.id,
+        selected: true,
+      })),
+    );
+  }, [onNodesChange]);
 
   useEffect(() => {
     const container = canvasRef.current;
@@ -152,7 +190,16 @@ export default function Canvas({ onSearchOpen }: CanvasProps) {
   );
 
   return (
-    <div ref={canvasRef} className="h-screen w-screen" data-testid="canvas-container">
+    <ContextMenu>
+    <ContextMenuTrigger asChild>
+    <div
+      ref={canvasRef}
+      className="h-screen w-screen"
+      data-testid="canvas-container"
+      onContextMenu={(e) => {
+        contextMenuPos.current = { x: e.clientX, y: e.clientY };
+      }}
+    >
       <CrowFootMarkers />
       <ReactFlow
         nodes={nodes}
@@ -181,6 +228,13 @@ export default function Canvas({ onSearchOpen }: CanvasProps) {
           nodeColor={(node) => (node.data as TableNodeData)?.table?.color ?? '#3b82f6'}
           data-testid="minimap"
         />
+        {nodes.length === 0 && (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <p className="text-sm text-muted-foreground/50">
+              Double-click or right-click to add a table
+            </p>
+          </div>
+        )}
         <div className="absolute -bottom-[1px] right-[73px] text-[10px] text-gray-400 dark:text-gray-600">
           Proudly clauded by JP GAVINI 04/2026
         </div>
@@ -191,5 +245,26 @@ export default function Canvas({ onSearchOpen }: CanvasProps) {
         onCancel={handleRelationCancel}
       />
     </div>
+    </ContextMenuTrigger>
+    <ContextMenuContent className="w-48" data-testid="canvas-context-menu">
+      <ContextMenuItem onClick={handleAddTableHere} data-testid="ctx-add-table">
+        <Plus className="mr-2 size-3.5" />
+        Add table here
+      </ContextMenuItem>
+      <ContextMenuSeparator />
+      <ContextMenuItem onClick={handleSelectAll} data-testid="ctx-select-all">
+        <MousePointerClick className="mr-2 size-3.5" />
+        Select all
+      </ContextMenuItem>
+      <ContextMenuItem onClick={handleAutoLayout} data-testid="ctx-auto-layout">
+        <LayoutGrid className="mr-2 size-3.5" />
+        Auto layout
+      </ContextMenuItem>
+      <ContextMenuItem onClick={handleFitView} data-testid="ctx-fit-view">
+        <Maximize className="mr-2 size-3.5" />
+        Fit view
+      </ContextMenuItem>
+    </ContextMenuContent>
+    </ContextMenu>
   );
 }
