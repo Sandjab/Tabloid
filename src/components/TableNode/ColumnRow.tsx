@@ -5,6 +5,7 @@ import { useInlineEdit } from '@/hooks/useInlineEdit';
 import { COLUMN_TYPES } from '@/types/schema';
 import type { Column, ColumnType } from '@/types/schema';
 import { GripVertical, KeyRound } from 'lucide-react';
+import { useColumnHighlight } from '@/hooks/useHighlight';
 
 interface ColumnRowProps {
   tableId: string;
@@ -47,6 +48,8 @@ const ColumnRow = memo(function ColumnRow({
     })),
   );
 
+  const highlight = useColumnHighlight(tableId, column.id);
+
   const onNameSubmit = useCallback(
     (value: string) => updateColumnName(tableId, column.id, value),
     [tableId, column.id, updateColumnName],
@@ -58,7 +61,13 @@ const ColumnRow = memo(function ColumnRow({
     <div
       className={`nodrag flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors duration-150 ${
         isDragging ? 'opacity-30' : ''
-      } ${isDragOver && !isDragging ? (dragBelow ? 'border-b-2 border-primary' : 'border-t-2 border-primary') : ''}`}
+      } ${isDragOver && !isDragging ? (dragBelow ? 'border-b-2 border-primary' : 'border-t-2 border-primary') : ''} ${
+        highlight === 'error'
+          ? 'bg-red-500/10'
+          : highlight === 'warning'
+            ? 'bg-orange-500/10'
+            : ''
+      }`}
       onDragOver={(e) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';

@@ -5,6 +5,7 @@ import { useSchemaStore } from '@/store/useSchemaStore';
 import { useInlineEdit } from '@/hooks/useInlineEdit';
 import { makeHandleId } from '@/utils/id';
 import type { TableFlowNode } from '@/types/schema';
+import { useTableHighlight } from '@/hooks/useHighlight';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import ColumnRow from './ColumnRow';
 import ColorPicker from './ColorPicker';
@@ -16,6 +17,8 @@ const TableNode = memo(function TableNode({ id, data }: NodeProps<TableFlowNode>
   const addColumn = useSchemaStore((s) => s.addColumn);
   const updateTableColor = useSchemaStore((s) => s.updateTableColor);
   const updateTableNotes = useSchemaStore((s) => s.updateTableNotes);
+
+  const highlight = useTableHighlight(id);
 
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
@@ -32,7 +35,13 @@ const TableNode = memo(function TableNode({ id, data }: NodeProps<TableFlowNode>
 
   return (
     <div
-      className="min-w-[250px] rounded-md border border-border bg-popover shadow-sm transition-shadow duration-200 hover:shadow-md"
+      className={`min-w-[250px] rounded-md border bg-popover shadow-sm transition-shadow duration-200 hover:shadow-md ${
+        highlight === 'error'
+          ? 'border-red-500 ring-2 ring-red-500/30'
+          : highlight === 'warning'
+            ? 'border-orange-500 ring-2 ring-orange-500/30'
+            : 'border-border'
+      }`}
       data-testid={`table-node-${id}`}
     >
       {/* Header */}
