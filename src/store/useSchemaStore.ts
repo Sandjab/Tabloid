@@ -27,6 +27,8 @@ export interface SchemaState {
   relations: Relation[];
   nodes: Node<TableNodeData>[];
   edges: Edge[];
+  schemaName: string;
+  setSchemaName: (name: string) => void;
 
   onNodesChange: (changes: NodeChange[]) => void;
   onEdgesChange: (changes: EdgeChange[]) => void;
@@ -62,7 +64,7 @@ export interface SchemaState {
 
   duplicateTable: (tableId: string) => string;
   updateTablePositions: (positions: Map<string, { x: number; y: number }>) => void;
-  loadSchema: (tables: Table[], relations: Relation[]) => void;
+  loadSchema: (tables: Table[], relations: Relation[], name?: string) => void;
   rebuildNodesFromTables: () => void;
 }
 
@@ -201,6 +203,7 @@ export const useSchemaStore = create<SchemaState>()(
       relations: [],
       nodes: [],
       edges: [],
+      schemaName: 'Untitled',
 
       onNodesChange: (changes: NodeChange[]) => {
         // Handle node removals by syncing tables and relations
@@ -561,13 +564,18 @@ export const useSchemaStore = create<SchemaState>()(
         });
       },
 
-      loadSchema: (tables, relations) => {
+      loadSchema: (tables, relations, name) => {
         set({
+          schemaName: name ?? 'Untitled',
           tables,
           relations,
           nodes: buildNodesFromTables(tables),
           edges: buildEdgesFromRelations(relations, tables),
         });
+      },
+
+      setSchemaName: (name) => {
+        set({ schemaName: name });
       },
 
       rebuildNodesFromTables: () => {
