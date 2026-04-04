@@ -24,6 +24,7 @@ import TableNode from '@/components/TableNode/TableNode';
 import RelationEdge from '@/components/RelationEdge/RelationEdge';
 import CrowFootMarkers from '@/components/RelationEdge/CrowFootMarkers';
 import RelationTypeDialog from '@/components/RelationTypeDialog/RelationTypeDialog';
+import StatusBar from '@/components/StatusBar/StatusBar';
 import type { RelationType, TableNodeData } from '@/types/schema';
 
 const nodeTypes: NodeTypes = {
@@ -194,12 +195,13 @@ export default function Canvas({ onSearchOpen }: CanvasProps) {
     <ContextMenuTrigger asChild>
     <div
       ref={canvasRef}
-      className="h-screen w-screen"
+      className="flex h-screen w-screen flex-col"
       data-testid="canvas-container"
       onContextMenu={(e) => {
         contextMenuPos.current = { x: e.clientX, y: e.clientY };
       }}
     >
+      <div className="relative flex-1">
       <CrowFootMarkers />
       <ReactFlow
         nodes={nodes}
@@ -235,15 +237,14 @@ export default function Canvas({ onSearchOpen }: CanvasProps) {
             </p>
           </div>
         )}
-        <div className="absolute -bottom-[1px] right-[73px] text-[10px] text-gray-400 dark:text-gray-600">
-          Proudly clauded by JP GAVINI 04/2026
-        </div>
       </ReactFlow>
       <RelationTypeDialog
         open={!!pendingConnection}
         onConfirm={handleRelationConfirm}
         onCancel={handleRelationCancel}
       />
+      </div>
+      <StatusBar />
     </div>
     </ContextMenuTrigger>
     <ContextMenuContent className="w-48" data-testid="canvas-context-menu">
