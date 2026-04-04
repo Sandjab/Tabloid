@@ -85,8 +85,8 @@ export const RELATION_TYPE_LABELS: Record<RelationType, { short: string; long: s
   'many-to-many': { short: 'N:N', long: 'N:N — Many to Many' },
 };
 
-export const EDGE_COLOR = '#94a3b8';
-export const EDGE_COLOR_SELECTED = '#3b82f6';
+export const EDGE_COLOR = '#8b9bb5';
+export const EDGE_COLOR_SELECTED = '#4f6fa0';
 
 export interface Relation {
   id: string;

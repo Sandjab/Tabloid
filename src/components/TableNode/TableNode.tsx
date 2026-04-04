@@ -32,12 +32,12 @@ const TableNode = memo(function TableNode({ id, data }: NodeProps<TableFlowNode>
 
   return (
     <div
-      className="min-w-[250px] rounded-lg border border-border bg-popover shadow-md transition-shadow duration-200 hover:shadow-lg"
+      className="min-w-[250px] rounded-md border border-border bg-popover shadow-sm transition-shadow duration-200 hover:shadow-md"
       data-testid={`table-node-${id}`}
     >
       {/* Header */}
       <div
-        className="relative flex items-center justify-between rounded-t-lg px-3 py-2 text-white"
+        className="relative flex items-center justify-between rounded-t-md px-3 py-1.5 text-white"
         style={{ backgroundColor: table.color ?? '#3b82f6' }}
       >
         {isEditing ? (

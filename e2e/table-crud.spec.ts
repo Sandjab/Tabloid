@@ -41,7 +41,7 @@ test.describe('Canvas + Table CRUD', () => {
     await expect(columns).toHaveCount(1);
 
     const pkBtn = page.locator('[data-testid^="column-pk-"]').first();
-    await expect(pkBtn).toHaveText('🔑');
+    await expect(pkBtn).toHaveClass(/text-amber-500/);
   });
 
   test('renames table on double-click', async ({ page }) => {
@@ -88,21 +88,21 @@ test.describe('Canvas + Table CRUD', () => {
     await page.getByTestId('add-table-btn').click();
     const pkBtn = page.locator('[data-testid^="column-pk-"]').first();
 
-    await expect(pkBtn).toHaveText('🔑');
+    await expect(pkBtn).toHaveClass(/text-amber-500/);
     await pkBtn.click();
     await expect(pkBtn).toHaveText('·');
     await pkBtn.click();
-    await expect(pkBtn).toHaveText('🔑');
+    await expect(pkBtn).toHaveClass(/text-amber-500/);
   });
 
   test('toggles NOT NULL constraint', async ({ page }) => {
     await page.getByTestId('add-table-btn').click();
     const nnBtn = page.locator('[data-testid^="column-nn-"]').first();
 
-    // Default PK column is NOT NULL (NN active = bold red)
-    await expect(nnBtn).toHaveClass(/font-bold/);
+    // Default PK column is NOT NULL (NN active = semibold rose)
+    await expect(nnBtn).toHaveClass(/font-semibold/);
     await nnBtn.click();
-    await expect(nnBtn).not.toHaveClass(/font-bold/);
+    await expect(nnBtn).not.toHaveClass(/font-semibold/);
   });
 
   test('drags a table to a new position', async ({ page }) => {

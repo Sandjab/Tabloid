@@ -130,7 +130,7 @@ const RelationEdge = memo(function RelationEdge({
         fill="none"
         stroke="white"
         strokeWidth={strokeWidth + 6}
-        className="dark:stroke-[#1a1a1a]"
+        className="dark:stroke-[#1c2030]"
       />
       <BaseEdge
         id={id}
@@ -141,7 +141,7 @@ const RelationEdge = memo(function RelationEdge({
       />
       <EdgeLabelRenderer>
         <div
-          className="nodrag nopan pointer-events-auto absolute rounded bg-white px-1 py-0.5 text-[8px] font-medium text-gray-600 shadow-sm dark:bg-gray-700 dark:text-gray-300"
+          className="nodrag nopan pointer-events-auto absolute rounded-sm bg-popover px-1 py-0.5 text-[8px] font-medium text-muted-foreground ring-1 ring-border dark:ring-0"
           style={{
             transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
           }}
