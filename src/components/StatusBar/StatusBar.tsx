@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useReactFlow, useStore } from '@xyflow/react';
 import { useSchemaStore } from '@/store/useSchemaStore';
 import { validateSchema, type ValidationWarning } from '@/utils/validate-schema';
@@ -14,6 +14,18 @@ export default function StatusBar() {
   const zoom = useStore(zoomSelector);
   const { zoomTo, setCenter } = useReactFlow();
   const [expanded, setExpanded] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!expanded) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setExpanded(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside, true);
+    return () => document.removeEventListener('mousedown', handleClickOutside, true);
+  }, [expanded]);
 
   const selectedCount = nodes.filter((n) => n.selected).length;
 
@@ -51,7 +63,7 @@ export default function StatusBar() {
   );
 
   return (
-    <div className="relative" data-testid="status-bar-container">
+    <div ref={containerRef} className="relative" data-testid="status-bar-container">
       {/* Expanded validation list */}
       {expanded && warnings.length > 0 && (
         <div
@@ -62,7 +74,7 @@ export default function StatusBar() {
             <button
               key={`${w.type}-${w.tableId}-${i}`}
               className="flex w-full items-start gap-2 px-3 py-1.5 text-left text-xs hover:bg-accent"
-              onClick={() => handleWarningClick(w)}
+              onClick={() => { handleWarningClick(w); setExpanded(false); }}
               data-testid={`warning-${w.type}-${i}`}
             >
               <span className={w.severity === 'error' ? 'text-destructive' : 'text-yellow-500'}>
@@ -76,7 +88,7 @@ export default function StatusBar() {
 
       {/* Status bar */}
       <div
-        className="flex h-6 items-center justify-between border-t border-border bg-background px-3 text-[10px] text-muted-foreground"
+        className="flex h-7 items-center justify-between border-t border-border bg-background px-3 text-xs text-muted-foreground"
         data-testid="status-bar"
       >
         <div className="flex items-center gap-3">
