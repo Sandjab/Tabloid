@@ -203,6 +203,22 @@ export const useSchemaStore = create<SchemaState>()(
       edges: [],
 
       onNodesChange: (changes: NodeChange[]) => {
+        // Handle node removals by syncing tables and relations
+        const removedIds = new Set(
+          changes
+            .filter((c) => c.type === 'remove')
+            .map((c) => c.id),
+        );
+        if (removedIds.size > 0) {
+          for (const id of removedIds) {
+            get().removeTable(id);
+          }
+          // Filter out remove changes — removeTable already handled nodes
+          const remaining = changes.filter((c) => c.type !== 'remove');
+          if (remaining.length === 0) return;
+          changes = remaining;
+        }
+
         set((state) => {
           const updatedNodes = applyNodeChanges(
             changes,

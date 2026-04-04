@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ReactFlow,
   Background,
@@ -47,10 +47,29 @@ export default function Canvas({ onSearchOpen }: CanvasProps) {
   const addTable = useSchemaStore((s) => s.addTable);
   const addRelation = useSchemaStore((s) => s.addRelation);
   const removeRelation = useSchemaStore((s) => s.removeRelation);
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, setCenter, getZoom } = useReactFlow();
 
   const lastPaneClickTime = useRef(0);
+  const canvasRef = useRef<HTMLDivElement>(null);
   const [pendingConnection, setPendingConnection] = useState<PendingConnection | null>(null);
+
+  useEffect(() => {
+    const container = canvasRef.current;
+    if (!container) return;
+    const handler = (e: MouseEvent) => {
+      const minimap = container.querySelector<HTMLElement>('.react-flow__minimap');
+      if (!minimap?.contains(e.target as Node)) return;
+      const svg = minimap.querySelector<SVGSVGElement>('svg.react-flow__minimap-svg');
+      if (!svg) return;
+      const rect = svg.getBoundingClientRect();
+      const vb = svg.viewBox.baseVal;
+      const flowX = vb.x + (e.clientX - rect.left) / rect.width * vb.width;
+      const flowY = vb.y + (e.clientY - rect.top) / rect.height * vb.height;
+      setCenter(flowX, flowY, { zoom: getZoom(), duration: 400 });
+    };
+    container.addEventListener('dblclick', handler, true);
+    return () => container.removeEventListener('dblclick', handler, true);
+  }, [setCenter, getZoom]);
 
   const handlePaneClick = useCallback(
     (event: React.MouseEvent) => {
@@ -133,7 +152,7 @@ export default function Canvas({ onSearchOpen }: CanvasProps) {
   );
 
   return (
-    <div className="h-screen w-screen" data-testid="canvas-container">
+    <div ref={canvasRef} className="h-screen w-screen" data-testid="canvas-container">
       <CrowFootMarkers />
       <ReactFlow
         nodes={nodes}

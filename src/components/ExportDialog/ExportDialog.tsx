@@ -1,10 +1,12 @@
 import { useState, useMemo } from 'react';
 import { useSchemaStore } from '@/store/useSchemaStore';
+import { validateSchema } from '@/utils/validate-schema';
 import { DIALECTS, DIALECT_NAMES } from '@/dialects';
 import { exportSQL } from '@/utils/export-sql';
 import { exportJSON } from '@/utils/export-json';
 import { exportYAML } from '@/utils/export-yaml';
 import { exportMermaid } from '@/utils/export-mermaid';
+import { exportDBML } from '@/utils/export-dbml';
 import { exportExcalidraw } from '@/utils/export-excalidraw';
 import { exportPNG, exportSVG } from '@/utils/export-image';
 import { downloadText } from '@/utils/download';
@@ -24,13 +26,14 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 
-type ExportFormat = 'sql' | 'json' | 'yaml' | 'mermaid' | 'excalidraw' | 'png' | 'svg';
+type ExportFormat = 'sql' | 'json' | 'yaml' | 'mermaid' | 'dbml' | 'excalidraw' | 'png' | 'svg';
 
 const FORMATS: { value: ExportFormat; label: string }[] = [
   { value: 'sql', label: 'SQL' },
   { value: 'json', label: 'JSON (.tabloid.json)' },
   { value: 'yaml', label: 'YAML' },
   { value: 'mermaid', label: 'Mermaid' },
+  { value: 'dbml', label: 'DBML' },
   { value: 'excalidraw', label: 'Excalidraw' },
   { value: 'png', label: 'PNG Image' },
   { value: 'svg', label: 'SVG Image' },
@@ -48,6 +51,10 @@ export default function ExportDialog({ open, onOpenChange }: ExportDialogProps) 
   const tables = useSchemaStore((s) => s.tables);
   const relations = useSchemaStore((s) => s.relations);
 
+  const validationIssues = useMemo(() => validateSchema(tables, relations), [tables, relations]);
+  const hasIssues = validationIssues.length > 0;
+  const exportBlocked = hasIssues && format !== 'json';
+
   const preview = useMemo(() => {
     switch (format) {
       case 'sql':
@@ -58,6 +65,8 @@ export default function ExportDialog({ open, onOpenChange }: ExportDialogProps) 
         return exportYAML(tables, relations, 'schema');
       case 'mermaid':
         return exportMermaid(tables, relations);
+      case 'dbml':
+        return exportDBML(tables, relations);
       case 'excalidraw':
         return exportExcalidraw(tables, relations);
       case 'png':
@@ -83,6 +92,9 @@ export default function ExportDialog({ open, onOpenChange }: ExportDialogProps) 
         break;
       case 'mermaid':
         downloadText(preview, 'schema.mmd');
+        break;
+      case 'dbml':
+        downloadText(preview, 'schema.dbml');
         break;
       case 'excalidraw':
         downloadText(preview, 'schema.excalidraw', 'application/json');
@@ -143,6 +155,17 @@ export default function ExportDialog({ open, onOpenChange }: ExportDialogProps) 
           )}
         </div>
 
+        {exportBlocked && (
+          <div
+            className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            data-testid="export-validation-banner"
+          >
+            Schema has {validationIssues.filter((w) => w.severity === 'error').length || 'no'} error(s) and{' '}
+            {validationIssues.filter((w) => w.severity === 'warning').length || 'no'} warning(s).
+            Fix all issues before exporting to {format.toUpperCase()}.
+          </div>
+        )}
+
         <div className="max-h-[50vh] overflow-auto">
           <pre
             className="whitespace-pre-wrap rounded-md bg-muted p-3 text-xs text-muted-foreground"
@@ -157,6 +180,7 @@ export default function ExportDialog({ open, onOpenChange }: ExportDialogProps) 
             <Button
               variant="outline"
               onClick={handleCopy}
+              disabled={exportBlocked}
               data-testid="export-copy-btn"
             >
               Copy
@@ -164,6 +188,7 @@ export default function ExportDialog({ open, onOpenChange }: ExportDialogProps) 
           )}
           <Button
             onClick={handleDownload}
+            disabled={exportBlocked}
             data-testid="export-download-btn"
           >
             Download

@@ -1,5 +1,5 @@
 import { memo, useState, useCallback } from 'react';
-import { Handle, Position } from '@xyflow/react';
+import { Handle, Position, useReactFlow } from '@xyflow/react';
 import type { NodeProps } from '@xyflow/react';
 import { useSchemaStore } from '@/store/useSchemaStore';
 import { useInlineEdit } from '@/hooks/useInlineEdit';
@@ -33,6 +33,20 @@ const TableNode = memo(function TableNode({ id, data, selected }: NodeProps<Tabl
   const { isEditing, handleSubmit, startEditing, cancelEditing } =
     useInlineEdit(onNameSubmit);
 
+  const { fitBounds, getInternalNode } = useReactFlow();
+
+  const handleHeaderDoubleClick = useCallback(() => {
+    const internal = getInternalNode(id);
+    if (!internal) return;
+    const { position } = internal;
+    const width = internal.measured?.width ?? 250;
+    const height = internal.measured?.height ?? 100;
+    fitBounds(
+      { x: position.x, y: position.y, width, height },
+      { padding: 1, duration: 400 },
+    );
+  }, [id, fitBounds, getInternalNode]);
+
   return (
     <div
       className={`min-w-[250px] rounded-md border bg-popover shadow-sm transition-shadow duration-200 hover:shadow-md ${
@@ -50,6 +64,7 @@ const TableNode = memo(function TableNode({ id, data, selected }: NodeProps<Tabl
       <div
         className="relative flex items-center justify-between rounded-t-md px-3 py-1.5 text-white"
         style={{ backgroundColor: table.color ?? '#3b82f6' }}
+        onDoubleClick={handleHeaderDoubleClick}
       >
         {isEditing ? (
           <input
@@ -65,8 +80,14 @@ const TableNode = memo(function TableNode({ id, data, selected }: NodeProps<Tabl
           />
         ) : (
           <span
-            className="cursor-pointer truncate font-semibold"
-            onDoubleClick={startEditing}
+            className={`cursor-pointer truncate font-semibold ${
+              highlight === 'error'
+                ? 'italic text-red-200'
+                : highlight === 'warning'
+                  ? 'italic text-orange-200'
+                  : ''
+            }`}
+            onDoubleClick={(e) => { e.stopPropagation(); startEditing(); }}
             data-testid={`table-name-${id}`}
           >
             {table.name}
