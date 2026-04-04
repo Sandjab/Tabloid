@@ -3,10 +3,20 @@ import { useReactFlow } from '@xyflow/react';
 import { useSchemaStore } from '@/store/useSchemaStore';
 import { useUndoRedo } from '@/hooks/useUndoRedo';
 import { useTheme } from '@/hooks/useTheme';
+import { useInlineEdit } from '@/hooks/useInlineEdit';
 import { computeAutoLayout } from '@/utils/auto-layout';
 import { importJSON } from '@/utils/import-json';
+import { dedupName } from '@/utils/naming';
+import { saveCurrentSchema, loadSchemaByName, renameStoredSchema, getRecentList } from '@/hooks/useAutoSave';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Plus,
   Undo2,
@@ -17,6 +27,8 @@ import {
   Search,
   Moon,
   Sun,
+  ChevronDown,
+  FilePlus2,
 } from 'lucide-react';
 
 interface ToolbarProps {
@@ -27,10 +39,44 @@ interface ToolbarProps {
 export default function Toolbar({ onSearchOpen, onExportOpen }: ToolbarProps) {
   const addTable = useSchemaStore((s) => s.addTable);
   const loadSchema = useSchemaStore((s) => s.loadSchema);
+  const schemaName = useSchemaStore((s) => s.schemaName);
+  const setSchemaName = useSchemaStore((s) => s.setSchemaName);
   const { screenToFlowPosition, fitView } = useReactFlow();
   const { undo, redo, canUndo, canRedo } = useUndoRedo();
   const { theme, toggleTheme } = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const onNameSubmit = useCallback(
+    (value: string) => {
+      const trimmed = value.trim();
+      if (!trimmed || trimmed === schemaName) return;
+      const recentNames = getRecentList()
+        .map((e) => e.name)
+        .filter((n) => n !== schemaName);
+      const safeName = dedupName(trimmed, recentNames);
+      renameStoredSchema(schemaName, safeName);
+      setSchemaName(safeName);
+    },
+    [schemaName, setSchemaName],
+  );
+
+  const { isEditing, handleSubmit, startEditing, cancelEditing } = useInlineEdit(onNameSubmit);
+
+  const recentSchemas = getRecentList().filter((e) => e.name !== schemaName);
+
+  const handleNewSchema = useCallback(() => {
+    saveCurrentSchema();
+    loadSchema([], [], 'Untitled');
+  }, [loadSchema]);
+
+  const handleLoadRecent = useCallback(
+    (name: string) => {
+      saveCurrentSchema();
+      loadSchemaByName(name);
+      fitView({ padding: 0.2, duration: 300 });
+    },
+    [fitView],
+  );
 
   const handleAddTable = useCallback(() => {
     const position = screenToFlowPosition({
@@ -59,8 +105,11 @@ export default function Toolbar({ onSearchOpen, onExportOpen }: ToolbarProps) {
       const reader = new FileReader();
       reader.onload = () => {
         try {
-          const { tables, relations } = importJSON(reader.result as string);
-          loadSchema(tables, relations);
+          saveCurrentSchema();
+          const { tables, relations, name } = importJSON(reader.result as string);
+          const existingNames = getRecentList().map((entry) => entry.name);
+          const safeName = dedupName(name, existingNames);
+          loadSchema(tables, relations, safeName);
           fitView({ padding: 0.2, duration: 300 });
         } catch (err) {
           alert(`Import failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -77,6 +126,81 @@ export default function Toolbar({ onSearchOpen, onExportOpen }: ToolbarProps) {
       className="absolute left-4 top-4 z-10 flex items-center gap-1 rounded-lg bg-popover p-1 shadow-sm ring-1 ring-border"
       data-testid="toolbar"
     >
+      {/* Schema name dropdown */}
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          data-testid="schema-name-btn"
+          className="flex items-center gap-1 rounded-md px-2 py-1 text-sm font-medium hover:bg-accent focus:outline-none"
+          onDoubleClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            startEditing();
+          }}
+          render={(props) => {
+            if (isEditing) {
+              return (
+                <div
+                  {...props}
+                  className="flex items-center"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <input
+                    data-testid="schema-name-input"
+                    className="max-w-[200px] rounded border border-input bg-background px-1 py-0.5 text-sm outline-none focus:ring-1 focus:ring-ring"
+                    defaultValue={schemaName}
+                    autoFocus
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSubmit((e.target as HTMLInputElement).value);
+                      } else if (e.key === 'Escape') {
+                        cancelEditing();
+                      }
+                    }}
+                    onBlur={(e) => handleSubmit(e.target.value)}
+                  />
+                </div>
+              );
+            }
+            return (
+              <button {...props}>
+                <span
+                  data-testid="schema-name-display"
+                  className="max-w-[200px] truncate"
+                >
+                  {schemaName}
+                </span>
+                <ChevronDown className="size-3.5 opacity-60" />
+              </button>
+            );
+          }}
+        />
+        <DropdownMenuContent data-testid="schema-dropdown">
+          <DropdownMenuItem
+            data-testid="new-schema-btn"
+            onSelect={handleNewSchema}
+          >
+            <FilePlus2 className="size-4" />
+            New schema
+          </DropdownMenuItem>
+          {recentSchemas.length > 0 && <DropdownMenuSeparator />}
+          {recentSchemas.map((entry) => (
+            <DropdownMenuItem
+              key={entry.name}
+              data-testid={`recent-schema-${entry.name}`}
+              onSelect={() => handleLoadRecent(entry.name)}
+            >
+              <span className="flex-1 truncate">{entry.name}</span>
+              <span className="ml-2 text-xs text-muted-foreground">
+                {entry.tableCount} table{entry.tableCount !== 1 ? 's' : ''}
+              </span>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <Separator orientation="vertical" className="mx-0.5 h-6" />
+
       <Button
         size="sm"
         onClick={handleAddTable}
