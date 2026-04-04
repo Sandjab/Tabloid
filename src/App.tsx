@@ -3,7 +3,6 @@ import Canvas from '@/components/Canvas/Canvas';
 import Toolbar from '@/components/Toolbar/Toolbar';
 import SearchDialog from '@/components/SearchDialog/SearchDialog';
 import ExportDialog from '@/components/ExportDialog/ExportDialog';
-import ValidationPanel from '@/components/ValidationPanel/ValidationPanel';
 import { useAutoSave, loadFromLocalStorage } from '@/hooks/useAutoSave';
 
 export default function App() {
@@ -21,7 +20,6 @@ export default function App() {
       <Canvas onSearchOpen={openSearch} />
       <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
       <ExportDialog open={exportOpen} onOpenChange={setExportOpen} />
-      <ValidationPanel />
     </div>
   );
 }
