@@ -15,7 +15,7 @@ import TableNode from '@/components/TableNode/TableNode';
 import RelationEdge from '@/components/RelationEdge/RelationEdge';
 import CrowFootMarkers from '@/components/RelationEdge/CrowFootMarkers';
 import RelationTypeDialog from '@/components/RelationTypeDialog/RelationTypeDialog';
-import type { RelationType } from '@/types/schema';
+import type { RelationType, TableNodeData } from '@/types/schema';
 
 const nodeTypes: NodeTypes = {
   table: TableNode,
@@ -159,7 +159,7 @@ export default function Canvas({ onSearchOpen }: CanvasProps) {
         <MiniMap
           pannable
           zoomable
-          nodeColor={(node) => node.data?.table?.color ?? '#3b82f6'}
+          nodeColor={(node) => (node.data as TableNodeData)?.table?.color ?? '#3b82f6'}
           data-testid="minimap"
         />
         <div className="absolute -bottom-[1px] right-[73px] text-[10px] text-gray-400 dark:text-gray-600">
