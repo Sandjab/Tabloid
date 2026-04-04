@@ -11,6 +11,7 @@ export interface ValidationWarning {
     | 'index-missing-column';
   severity: 'error' | 'warning';
   tableId: string;
+  columnId?: string;
   message: string;
 }
 
@@ -65,6 +66,7 @@ export function validateSchema(
           type: 'duplicate-column-name',
           severity: 'error',
           tableId: table.id,
+          columnId: col.id,
           message: `Table "${table.name}" has duplicate column name "${col.name}"`,
         });
       }
@@ -80,6 +82,7 @@ export function validateSchema(
             type: 'index-missing-column',
             severity: 'error',
             tableId: table.id,
+            columnId: colId,
             message: `Index "${idx.name}" on "${table.name}" references a missing column`,
           });
         }
@@ -109,6 +112,7 @@ export function validateSchema(
         type: 'fk-incompatible-types',
         severity: 'warning',
         tableId: rel.sourceTableId,
+        columnId: rel.sourceColumnId,
         message: `FK between "${srcTable?.name}" and "${tgtTable?.name}" has incompatible types (${src.type} vs ${tgt.type})`,
       });
     }

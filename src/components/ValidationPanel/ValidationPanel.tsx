@@ -1,14 +1,23 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { useSchemaStore } from '@/store/useSchemaStore';
-import { validateSchema } from '@/utils/validate-schema';
+import { useValidationHighlightStore } from '@/store/useValidationHighlightStore';
+import { validateSchema, type ValidationWarning } from '@/utils/validate-schema';
+import type { HighlightTarget } from '@/store/useValidationHighlightStore';
 import { Button } from '@/components/ui/button';
 import { ChevronUp, ChevronDown } from 'lucide-react';
+
+function warningKey(w: ValidationWarning): string {
+  return `${w.type}:${w.tableId}:${w.columnId ?? ''}`;
+}
 
 export default function ValidationPanel() {
   const tables = useSchemaStore((s) => s.tables);
   const relations = useSchemaStore((s) => s.relations);
   const onNodesChange = useSchemaStore((s) => s.onNodesChange);
+  const setHighlights = useValidationHighlightStore((s) => s.setHighlights);
+  const clearHighlights = useValidationHighlightStore((s) => s.clearHighlights);
+  const activeWarningKey = useValidationHighlightStore((s) => s.activeWarningKey);
   const { setCenter } = useReactFlow();
   const [collapsed, setCollapsed] = useState(true);
 
@@ -17,10 +26,18 @@ export default function ValidationPanel() {
     [tables, relations],
   );
 
+  // Auto-clear highlights when the active warning no longer exists
+  useEffect(() => {
+    if (activeWarningKey !== null) {
+      const stillExists = warnings.some((w) => warningKey(w) === activeWarningKey);
+      if (!stillExists) clearHighlights();
+    }
+  }, [warnings, activeWarningKey, clearHighlights]);
+
   if (warnings.length === 0) return null;
 
-  const handleWarningClick = (tableId: string) => {
-    const table = tables.find((t) => t.id === tableId);
+  const handleWarningClick = (warning: ValidationWarning) => {
+    const table = tables.find((t) => t.id === warning.tableId);
     if (table) {
       setCenter(table.position.x + 125, table.position.y + 50, {
         zoom: 1.2,
@@ -31,10 +48,25 @@ export default function ValidationPanel() {
         nodes.map((n) => ({
           type: 'select' as const,
           id: n.id,
-          selected: n.id === tableId,
+          selected: n.id === warning.tableId,
         })),
       );
     }
+
+    const targets: HighlightTarget[] = [];
+    if (warning.columnId) {
+      targets.push({
+        tableId: warning.tableId,
+        columnId: warning.columnId,
+        severity: warning.severity,
+      });
+    } else {
+      targets.push({
+        tableId: warning.tableId,
+        severity: warning.severity,
+      });
+    }
+    setHighlights(targets, warningKey(warning));
   };
 
   const errorCount = warnings.filter((w) => w.severity === 'error').length;
@@ -70,8 +102,10 @@ export default function ValidationPanel() {
           {warnings.map((w, i) => (
             <button
               key={`${w.type}-${w.tableId}-${i}`}
-              className="flex w-full items-start gap-2 px-3 py-1.5 text-left text-xs hover:bg-accent"
-              onClick={() => handleWarningClick(w.tableId)}
+              className={`flex w-full items-start gap-2 px-3 py-1.5 text-left text-xs hover:bg-accent ${
+                activeWarningKey === warningKey(w) ? 'bg-accent' : ''
+              }`}
+              onClick={() => handleWarningClick(w)}
               data-testid={`warning-${w.type}-${i}`}
             >
               <span className={w.severity === 'error' ? 'text-destructive' : 'text-yellow-500'}>
