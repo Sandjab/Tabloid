@@ -50,6 +50,7 @@ export default function ExportDialog({ open, onOpenChange }: ExportDialogProps) 
 
   const tables = useSchemaStore((s) => s.tables);
   const relations = useSchemaStore((s) => s.relations);
+  const schemaName = useSchemaStore((s) => s.schemaName);
 
   const validationIssues = useMemo(() => validateSchema(tables, relations), [tables, relations]);
   const hasIssues = validationIssues.length > 0;
@@ -60,9 +61,9 @@ export default function ExportDialog({ open, onOpenChange }: ExportDialogProps) 
       case 'sql':
         return exportSQL(tables, relations, DIALECTS[dialect]);
       case 'json':
-        return exportJSON(tables, relations, 'schema');
+        return exportJSON(tables, relations, schemaName);
       case 'yaml':
-        return exportYAML(tables, relations, 'schema');
+        return exportYAML(tables, relations, schemaName);
       case 'mermaid':
         return exportMermaid(tables, relations);
       case 'dbml':
@@ -73,7 +74,7 @@ export default function ExportDialog({ open, onOpenChange }: ExportDialogProps) 
       case 'svg':
         return `(${format.toUpperCase()} will be exported as an image file)`;
     }
-  }, [format, dialect, tables, relations]);
+  }, [format, dialect, tables, relations, schemaName]);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(preview);
@@ -82,28 +83,28 @@ export default function ExportDialog({ open, onOpenChange }: ExportDialogProps) 
   const handleDownload = async () => {
     switch (format) {
       case 'sql':
-        downloadText(preview, 'schema.sql');
+        downloadText(preview, `${schemaName}.sql`);
         break;
       case 'json':
-        downloadText(preview, 'schema.tabloid.json', 'application/json');
+        downloadText(preview, `${schemaName}.tabloid.json`, 'application/json');
         break;
       case 'yaml':
-        downloadText(preview, 'schema.yaml', 'text/yaml');
+        downloadText(preview, `${schemaName}.yaml`, 'text/yaml');
         break;
       case 'mermaid':
-        downloadText(preview, 'schema.mmd');
+        downloadText(preview, `${schemaName}.mmd`);
         break;
       case 'dbml':
-        downloadText(preview, 'schema.dbml');
+        downloadText(preview, `${schemaName}.dbml`);
         break;
       case 'excalidraw':
-        downloadText(preview, 'schema.excalidraw', 'application/json');
+        downloadText(preview, `${schemaName}.excalidraw`, 'application/json');
         break;
       case 'png':
-        await exportPNG('schema.png');
+        await exportPNG(`${schemaName}.png`);
         break;
       case 'svg':
-        await exportSVG('schema.svg');
+        await exportSVG(`${schemaName}.svg`);
         break;
     }
     onOpenChange(false);
