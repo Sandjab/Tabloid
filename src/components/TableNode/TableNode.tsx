@@ -11,7 +11,7 @@ import ColumnRow from './ColumnRow';
 import ColorPicker from './ColorPicker';
 import NotesPopover from './NotesPopover';
 
-const TableNode = memo(function TableNode({ id, data }: NodeProps<TableFlowNode>) {
+const TableNode = memo(function TableNode({ id, data, selected }: NodeProps<TableFlowNode>) {
   const { table } = data;
   const updateTableName = useSchemaStore((s) => s.updateTableName);
   const addColumn = useSchemaStore((s) => s.addColumn);
@@ -40,7 +40,9 @@ const TableNode = memo(function TableNode({ id, data }: NodeProps<TableFlowNode>
           ? 'border-red-500 ring-2 ring-red-500/30'
           : highlight === 'warning'
             ? 'border-orange-500 ring-2 ring-orange-500/30'
-            : 'border-border'
+            : selected
+              ? 'border-primary ring-2 ring-primary/30'
+              : 'border-border'
       }`}
       data-testid={`table-node-${id}`}
     >

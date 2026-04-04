@@ -114,7 +114,13 @@ const ColumnRow = memo(function ColumnRow({
         />
       ) : (
         <span
-          className="w-[120px] cursor-pointer truncate text-foreground"
+          className={`w-[120px] cursor-pointer truncate ${
+            highlight === 'error'
+              ? 'text-red-700 dark:text-red-400'
+              : highlight === 'warning'
+                ? 'text-orange-500'
+                : 'text-foreground'
+          }`}
           onDoubleClick={startEditing}
           title={column.name}
           data-testid={`column-name-${column.id}`}
