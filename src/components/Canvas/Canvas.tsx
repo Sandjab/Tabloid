@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ReactFlow,
   Background,
@@ -6,6 +6,8 @@ import {
   MiniMap,
   SelectionMode,
   useReactFlow,
+  getNodesBounds,
+  useStore,
 } from '@xyflow/react';
 import type { NodeTypes, EdgeTypes, Connection, IsValidConnection } from '@xyflow/react';
 import { useSchemaStore } from '@/store/useSchemaStore';
@@ -58,6 +60,20 @@ export default function Canvas({ onSearchOpen }: CanvasProps) {
   const addRelation = useSchemaStore((s) => s.addRelation);
   const removeRelation = useSchemaStore((s) => s.removeRelation);
   const { screenToFlowPosition, setCenter, getZoom, fitView } = useReactFlow();
+  const viewportWidth = useStore((s) => s.width);
+  const viewportHeight = useStore((s) => s.height);
+
+  const minZoom = useMemo(() => {
+    const BASE_MIN = 0.2;
+    const PADDING = 0.2;
+    if (nodes.length === 0) return BASE_MIN;
+    const bounds = getNodesBounds(nodes);
+    if (bounds.width === 0 || bounds.height === 0) return BASE_MIN;
+    const paddedWidth = bounds.width * (1 + PADDING * 2);
+    const paddedHeight = bounds.height * (1 + PADDING * 2);
+    const fitZoom = Math.min(viewportWidth / paddedWidth, viewportHeight / paddedHeight);
+    return Math.min(BASE_MIN, fitZoom);
+  }, [nodes, viewportWidth, viewportHeight]);
 
   const lastPaneClickTime = useRef(0);
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -218,6 +234,7 @@ export default function Canvas({ onSearchOpen }: CanvasProps) {
         selectionMode={SelectionMode.Partial}
         multiSelectionKeyCode="Shift"
         deleteKeyCode="Delete"
+        minZoom={minZoom}
         zoomOnDoubleClick={false}
         fitView
         data-testid="react-flow-canvas"
