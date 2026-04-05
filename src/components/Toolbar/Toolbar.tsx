@@ -7,6 +7,7 @@ import { useInlineEdit } from '@/hooks/useInlineEdit';
 import { computeAutoLayout } from '@/utils/auto-layout';
 import { exportJSON } from '@/utils/export-json';
 import { importJSON } from '@/utils/import-json';
+import { parseSQL } from '@/utils/import-sql';
 import { dedupName } from '@/utils/naming';
 import { saveCurrentSchema, loadSchemaByName, renameStoredSchema, getRecentList } from '@/hooks/useAutoSave';
 import { Button } from '@/components/ui/button';
@@ -129,7 +130,9 @@ export default function Toolbar({ onSearchOpen, onExportOpen }: ToolbarProps) {
       reader.onload = () => {
         try {
           saveCurrentSchema();
-          const { tables, relations, name } = importJSON(reader.result as string);
+          const content = reader.result as string;
+          const isSql = file.name.endsWith('.sql') || /^\s*(--|\/\*|CREATE\s|ALTER\s)/i.test(content);
+          const { tables, relations, name } = isSql ? parseSQL(content) : importJSON(content);
           const existingNames = getRecentList().map((entry) => entry.name);
           const safeName = dedupName(name, existingNames);
           loadSchema(tables, relations, safeName);
@@ -310,7 +313,7 @@ export default function Toolbar({ onSearchOpen, onExportOpen }: ToolbarProps) {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".json,.tabloid.json"
+        accept=".json,.tabloid.json,.sql"
         className="hidden"
         onChange={handleFileChange}
         data-testid="import-file-input"
