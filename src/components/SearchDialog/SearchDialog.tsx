@@ -28,12 +28,9 @@ export default function SearchDialog({ open, onOpenChange }: SearchDialogProps) 
 
   useEffect(() => {
     if (open) {
-      // Small delay to let the dialog animate open before focusing
       const t = setTimeout(() => inputRef.current?.focus(), 50);
       return () => clearTimeout(t);
     }
-    // Reset query when dialog closes
-    setQuery('');
   }, [open]);
 
   const results = useMemo(() => {

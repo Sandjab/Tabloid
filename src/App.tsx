@@ -8,7 +8,8 @@ import { useAutoSave, loadFromLocalStorage } from '@/hooks/useAutoSave';
 export default function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
-  const openSearch = useCallback(() => setSearchOpen(true), []);
+  const [searchKey, setSearchKey] = useState(0);
+  const openSearch = useCallback(() => { setSearchKey((k) => k + 1); setSearchOpen(true); }, []);
   const openExport = useCallback(() => setExportOpen(true), []);
 
   useAutoSave();
@@ -18,7 +19,7 @@ export default function App() {
     <div className="relative h-screen w-screen overflow-hidden bg-background">
       <Toolbar onSearchOpen={openSearch} onExportOpen={openExport} />
       <Canvas onSearchOpen={openSearch} />
-      <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+      <SearchDialog key={searchKey} open={searchOpen} onOpenChange={setSearchOpen} />
       <ExportDialog open={exportOpen} onOpenChange={setExportOpen} />
     </div>
   );
