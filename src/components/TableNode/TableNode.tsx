@@ -75,8 +75,7 @@ const TableNode = memo(function TableNode({ id, data, selected }: NodeProps<Tabl
     >
       {/* Header */}
       <ContextMenu>
-      <ContextMenuTrigger asChild>
-      <div
+      <ContextMenuTrigger
         className="relative flex items-center justify-between rounded-t-md px-3 py-1.5 text-white"
         style={{ backgroundColor: table.color ?? '#3b82f6' }}
         onDoubleClick={handleHeaderDoubleClick}
@@ -151,7 +150,6 @@ const TableNode = memo(function TableNode({ id, data, selected }: NodeProps<Tabl
             +
           </button>
         </div>
-      </div>
       </ContextMenuTrigger>
       <ContextMenuContent className="w-48" data-testid={`table-context-menu-${id}`}>
         <ContextMenuItem onClick={startEditing} data-testid={`ctx-rename-${id}`}>

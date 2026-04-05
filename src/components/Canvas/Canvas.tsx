@@ -208,16 +208,15 @@ export default function Canvas({ onSearchOpen }: CanvasProps) {
 
   return (
     <ContextMenu>
-    <ContextMenuTrigger asChild>
-    <div
-      ref={canvasRef}
-      className="flex h-screen w-screen flex-col"
-      data-testid="canvas-container"
-      onContextMenu={(e) => {
-        contextMenuPos.current = { x: e.clientX, y: e.clientY };
-      }}
-    >
-      <div className="relative flex-1">
+    <ContextMenuTrigger className="flex h-screen w-screen flex-col">
+      <div
+        ref={canvasRef}
+        className="relative flex-1"
+        data-testid="canvas-container"
+        onContextMenu={(e) => {
+          contextMenuPos.current = { x: e.clientX, y: e.clientY };
+        }}
+      >
       <CrowFootMarkers />
       <ReactFlow
         nodes={nodes}
@@ -262,7 +261,6 @@ export default function Canvas({ onSearchOpen }: CanvasProps) {
       />
       </div>
       <StatusBar />
-    </div>
     </ContextMenuTrigger>
     <ContextMenuContent className="w-48" data-testid="canvas-context-menu">
       <ContextMenuItem onClick={handleAddTableHere} data-testid="ctx-add-table">
