@@ -178,7 +178,7 @@ export default function Toolbar({ onSearchOpen, onExportOpen }: ToolbarProps) {
         <DropdownMenuContent data-testid="schema-dropdown">
           <DropdownMenuItem
             data-testid="new-schema-btn"
-            onSelect={handleNewSchema}
+            onClick={handleNewSchema}
           >
             <FilePlus2 className="size-4" />
             New schema
@@ -188,7 +188,7 @@ export default function Toolbar({ onSearchOpen, onExportOpen }: ToolbarProps) {
             <DropdownMenuItem
               key={entry.name}
               data-testid={`recent-schema-${entry.name}`}
-              onSelect={() => handleLoadRecent(entry.name)}
+              onClick={() => handleLoadRecent(entry.name)}
             >
               <span className="flex-1 truncate">{entry.name}</span>
               <span className="ml-2 text-xs text-muted-foreground">

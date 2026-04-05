@@ -572,6 +572,7 @@ export const useSchemaStore = create<SchemaState>()(
           nodes: buildNodesFromTables(tables),
           edges: buildEdgesFromRelations(relations, tables),
         });
+        useSchemaStore.temporal.getState().clear();
       },
 
       setSchemaName: (name) => {
