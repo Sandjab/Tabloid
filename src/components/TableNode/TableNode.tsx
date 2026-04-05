@@ -91,6 +91,7 @@ const TableNode = memo(function TableNode({ id, data, selected }: NodeProps<Tabl
               if (e.key === 'Enter') handleSubmit(e.currentTarget.value);
               if (e.key === 'Escape') cancelEditing();
             }}
+            onContextMenu={(e) => e.stopPropagation()}
             data-testid={`table-name-input-${id}`}
           />
         ) : (
@@ -195,7 +196,17 @@ const TableNode = memo(function TableNode({ id, data, selected }: NodeProps<Tabl
       </ContextMenu>
 
       {/* Columns with per-column handles */}
-      <div className="divide-y divide-border">
+      <div
+        className="divide-y divide-border"
+        onContextMenu={(e) => {
+          if ((e.target as HTMLElement).tagName === 'INPUT') {
+            e.stopPropagation();
+          } else {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
+      >
         {table.columns.map((column, index) => (
           <div key={column.id} className="group/row relative">
             <ColumnRow

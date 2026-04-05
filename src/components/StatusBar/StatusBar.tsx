@@ -103,12 +103,12 @@ export default function StatusBar() {
               data-testid="validation-toggle"
             >
               {errorCount > 0 && (
-                <span className="animate-badge-pulse text-destructive">
+                <span className="animate-badge-pulse rounded bg-destructive/10 px-1.5 text-destructive">
                   {errorCount} error{errorCount !== 1 ? 's' : ''}
                 </span>
               )}
               {warnCount > 0 && (
-                <span className="text-yellow-600 dark:text-yellow-400">
+                <span className="rounded bg-yellow-100 px-1.5 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300">
                   {warnCount} warning{warnCount !== 1 ? 's' : ''}
                 </span>
               )}
