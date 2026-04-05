@@ -4,6 +4,7 @@ import { useSchemaStore } from '@/store/useSchemaStore';
 import { downloadDataUrl } from './download';
 
 const PADDING = 40;
+const EDGE_COLOR = '#8b9bb5';
 const PRINT_STYLE_ID = 'tabloid-print-style';
 const PRINT_CLASS = 'tabloid-print';
 
@@ -26,7 +27,7 @@ const PRINT_CSS = `
 }
 /* Hide interactive UI chrome */
 .${PRINT_CLASS} .react-flow__handle {
-  display: none !important;
+  opacity: 0 !important;
 }
 .${PRINT_CLASS} [data-testid^="column-drag-handle"] {
   display: none !important;
@@ -44,10 +45,6 @@ const PRINT_CSS = `
   background: transparent !important;
   padding: 0 !important;
   color: #6b7280 !important;
-}
-/* Edge bridge: force white stroke */
-.${PRINT_CLASS} .react-flow__edge path.dark\\:stroke-\\[\\#1c2030\\] {
-  stroke: white !important;
 }
 /* Edge labels: white bg, clean border */
 .${PRINT_CLASS} .nodrag.nopan {
@@ -78,6 +75,9 @@ function getReactFlowWrapper(): HTMLElement {
 
 const MARKER_DEFS_ID = 'tabloid-print-markers';
 
+// Saved marker attributes to restore after capture
+let savedMarkers: { el: Element; attr: string; value: string }[] = [];
+
 function injectPrintMode(): void {
   const style = document.createElement('style');
   style.id = PRINT_STYLE_ID;
@@ -93,12 +93,31 @@ function injectPrintMode(): void {
     (markerDefs as Element).id = MARKER_DEFS_ID;
     edgesSvg.prepend(markerDefs);
   }
+
+  // Change bridge path stroke from white/dark to edge color so
+  // the wider bridge extends the visible line to the table borders.
+  // (In the live viewport, the bridge creates a "crossing" effect;
+  //  in print on white bg, we repurpose it as line extension.)
+  savedMarkers = [];
+  document.querySelectorAll('.react-flow__edge path').forEach((path) => {
+    const stroke = path.getAttribute('stroke');
+    if (stroke === 'white') {
+      savedMarkers.push({ el: path, attr: 'stroke', value: stroke });
+      path.setAttribute('stroke', EDGE_COLOR);
+    }
+  });
 }
 
 function removePrintMode(): void {
   document.getElementById(PRINT_STYLE_ID)?.remove();
   document.getElementById(MARKER_DEFS_ID)?.remove();
   document.querySelector(`.${PRINT_CLASS}`)?.classList.remove(PRINT_CLASS);
+
+  // Restore marker attributes
+  for (const { el, attr, value } of savedMarkers) {
+    el.setAttribute(attr, value);
+  }
+  savedMarkers = [];
 }
 
 function filterChrome(node: HTMLElement): boolean {
