@@ -5,6 +5,7 @@ import { useUndoRedo } from '@/hooks/useUndoRedo';
 import { useTheme } from '@/hooks/useTheme';
 import { useInlineEdit } from '@/hooks/useInlineEdit';
 import { computeAutoLayout } from '@/utils/auto-layout';
+import { exportJSON } from '@/utils/export-json';
 import { importJSON } from '@/utils/import-json';
 import { dedupName } from '@/utils/naming';
 import { saveCurrentSchema, loadSchemaByName, renameStoredSchema, getRecentList } from '@/hooks/useAutoSave';
@@ -29,6 +30,8 @@ import {
   Sun,
   ChevronDown,
   FilePlus2,
+  Clipboard,
+  ClipboardPaste,
 } from 'lucide-react';
 
 interface ToolbarProps {
@@ -68,6 +71,26 @@ export default function Toolbar({ onSearchOpen, onExportOpen }: ToolbarProps) {
     saveCurrentSchema();
     loadSchema([], [], 'Untitled');
   }, [loadSchema]);
+
+  const handleCopyToClipboard = useCallback(() => {
+    const { tables, relations, schemaName: name } = useSchemaStore.getState();
+    const json = exportJSON(tables, relations, name);
+    navigator.clipboard.writeText(json);
+  }, []);
+
+  const handlePasteFromClipboard = useCallback(async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      saveCurrentSchema();
+      const { tables, relations, name } = importJSON(text);
+      const existingNames = getRecentList().map((e) => e.name);
+      const safeName = dedupName(name, existingNames);
+      loadSchema(tables, relations, safeName);
+      fitView({ padding: 0.2, duration: 300 });
+    } catch (err) {
+      alert(`Paste failed: ${err instanceof Error ? err.message : 'Invalid clipboard content'}`);
+    }
+  }, [loadSchema, fitView]);
 
   const handleLoadRecent = useCallback(
     (name: string) => {
@@ -182,6 +205,21 @@ export default function Toolbar({ onSearchOpen, onExportOpen }: ToolbarProps) {
           >
             <FilePlus2 className="size-4" />
             New schema
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            data-testid="copy-clipboard-btn"
+            onClick={handleCopyToClipboard}
+          >
+            <Clipboard className="size-4" />
+            Copy to clipboard
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            data-testid="paste-clipboard-btn"
+            onClick={handlePasteFromClipboard}
+          >
+            <ClipboardPaste className="size-4" />
+            Paste from clipboard
           </DropdownMenuItem>
           {recentSchemas.length > 0 && <DropdownMenuSeparator />}
           {recentSchemas.map((entry) => (
