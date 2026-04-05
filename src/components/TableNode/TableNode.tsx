@@ -15,8 +15,10 @@ import {
   ContextMenuSub,
   ContextMenuSubContent,
   ContextMenuSubTrigger,
+  ContextMenuShortcut,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
+import { isMac } from '@/utils/platform';
 import { Plus, Copy, Pencil, StickyNote, Trash2, Palette } from 'lucide-react';
 import ColumnRow from './ColumnRow';
 import ColorPicker from './ColorPicker';
@@ -163,6 +165,7 @@ const TableNode = memo(function TableNode({ id, data, selected }: NodeProps<Tabl
         <ContextMenuItem onClick={() => duplicateTable(id)} data-testid={`ctx-duplicate-${id}`}>
           <Copy className="mr-2 size-3.5" />
           Duplicate table
+          <ContextMenuShortcut>{isMac ? '⌘D' : 'Ctrl+D'}</ContextMenuShortcut>
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuSub>
@@ -189,6 +192,7 @@ const TableNode = memo(function TableNode({ id, data, selected }: NodeProps<Tabl
         >
           <Trash2 className="mr-2 size-3.5" />
           Delete table
+          <ContextMenuShortcut>Del</ContextMenuShortcut>
         </ContextMenuItem>
       </ContextMenuContent>
       </ContextMenu>

@@ -19,8 +19,10 @@ import {
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
+  ContextMenuShortcut,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
+import { isMac } from '@/utils/platform';
 import { Plus, Maximize, LayoutGrid, MousePointerClick } from 'lucide-react';
 import TableNode from '@/components/TableNode/TableNode';
 import RelationEdge from '@/components/RelationEdge/RelationEdge';
@@ -271,6 +273,7 @@ export default function Canvas({ onSearchOpen }: CanvasProps) {
       <ContextMenuItem onClick={handleSelectAll} data-testid="ctx-select-all">
         <MousePointerClick className="mr-2 size-3.5" />
         Select all
+        <ContextMenuShortcut>{isMac ? '⌘A' : 'Ctrl+A'}</ContextMenuShortcut>
       </ContextMenuItem>
       <ContextMenuItem onClick={handleAutoLayout} data-testid="ctx-auto-layout">
         <LayoutGrid className="mr-2 size-3.5" />
@@ -279,6 +282,7 @@ export default function Canvas({ onSearchOpen }: CanvasProps) {
       <ContextMenuItem onClick={handleFitView} data-testid="ctx-fit-view">
         <Maximize className="mr-2 size-3.5" />
         Fit view
+        <ContextMenuShortcut>{isMac ? '⌘0' : 'Ctrl+0'}</ContextMenuShortcut>
       </ContextMenuItem>
     </ContextMenuContent>
     </ContextMenu>
