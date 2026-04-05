@@ -76,16 +76,28 @@ function getReactFlowWrapper(): HTMLElement {
   return el;
 }
 
+const MARKER_DEFS_ID = 'tabloid-print-markers';
+
 function injectPrintMode(): void {
   const style = document.createElement('style');
   style.id = PRINT_STYLE_ID;
   style.textContent = PRINT_CSS;
   document.head.appendChild(style);
   getReactFlowWrapper().classList.add(PRINT_CLASS);
+
+  // CrowFootMarkers <defs> live outside .react-flow__viewport, so
+  // html-to-image won't capture them. Clone them into the edges SVG.
+  const edgesSvg = document.querySelector('.react-flow__viewport svg:has(.react-flow__edge)');
+  const markerDefs = document.querySelector('svg.absolute > defs')?.cloneNode(true) as Element | null;
+  if (edgesSvg && markerDefs) {
+    (markerDefs as Element).id = MARKER_DEFS_ID;
+    edgesSvg.prepend(markerDefs);
+  }
 }
 
 function removePrintMode(): void {
   document.getElementById(PRINT_STYLE_ID)?.remove();
+  document.getElementById(MARKER_DEFS_ID)?.remove();
   document.querySelector(`.${PRINT_CLASS}`)?.classList.remove(PRINT_CLASS);
 }
 
