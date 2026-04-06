@@ -7,6 +7,8 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import type { Column } from '@/types/schema';
 
 interface IndexDialogProps {
@@ -76,8 +78,7 @@ export default function IndexDialog({
           {/* Name */}
           <div>
             <label className="mb-1 block text-xs font-medium text-muted-foreground">Name</label>
-            <input
-              className="w-full rounded-md border bg-transparent px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring"
+            <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
               data-testid="index-name-input"
@@ -118,11 +119,9 @@ export default function IndexDialog({
 
           {/* Unique toggle */}
           <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
+            <Checkbox
               checked={isUnique}
-              onChange={(e) => setIsUnique(e.target.checked)}
-              className="rounded border"
+              onCheckedChange={(checked) => setIsUnique(checked as boolean)}
               data-testid="index-unique-toggle"
             />
             Unique index

@@ -212,7 +212,7 @@ export default function Canvas({ onSearchOpen }: CanvasProps) {
         multiSelectionKeyCode="Shift"
         deleteKeyCode="Delete"
         minZoom={minZoom}
-        maxZoom={4}
+        maxZoom={2}
         zoomOnDoubleClick={false}
         fitView
         data-testid="react-flow-canvas"
@@ -227,9 +227,33 @@ export default function Canvas({ onSearchOpen }: CanvasProps) {
         />
         {nodes.length === 0 && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <p className="text-sm text-muted-foreground/50">
-              Double-click or right-click to add a table
-            </p>
+            <div className="flex flex-col items-center gap-5">
+              {/* Schema wireframe hint */}
+              <div className="flex items-center gap-4 text-muted-foreground/[0.08]">
+                <div className="flex w-28 flex-col rounded-md border-2 border-current">
+                  <div className="h-4 rounded-t-[4px] border-b-2 border-current bg-current" />
+                  <div className="flex flex-col gap-1 p-1.5">
+                    <div className="h-1.5 w-3/4 rounded-full bg-current" />
+                    <div className="h-1.5 w-1/2 rounded-full bg-current" />
+                  </div>
+                </div>
+                <div className="h-px w-10 border-t-2 border-dashed border-current" />
+                <div className="flex w-24 flex-col rounded-md border-2 border-current">
+                  <div className="h-4 rounded-t-[4px] border-b-2 border-current bg-current" />
+                  <div className="flex flex-col gap-1 p-1.5">
+                    <div className="h-1.5 w-2/3 rounded-full bg-current" />
+                  </div>
+                </div>
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-medium text-muted-foreground/70">
+                  Double-click anywhere to create your first table
+                </p>
+                <p className="mt-1.5 text-xs text-muted-foreground/40">
+                  or right-click for more options
+                </p>
+              </div>
+            </div>
           </div>
         )}
       </ReactFlow>

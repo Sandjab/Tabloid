@@ -101,7 +101,7 @@ const TableNode = memo(function TableNode({ id, data, selected }: NodeProps<Tabl
           />
         ) : (
           <span
-            className={`cursor-pointer truncate font-semibold ${
+            className={`cursor-pointer truncate text-base font-bold leading-snug ${
               highlight === 'error'
                 ? 'italic text-red-200'
                 : highlight === 'warning'
@@ -117,10 +117,11 @@ const TableNode = memo(function TableNode({ id, data, selected }: NodeProps<Tabl
         <div className="nodrag flex shrink-0 items-center gap-0.5">
           <Popover open={showColorPicker} onOpenChange={setShowColorPicker}>
             <PopoverTrigger
-              className="rounded px-1 text-xs hover:bg-white/20"
+              className="rounded p-1 hover:bg-white/20"
               data-testid={`color-btn-${id}`}
+              title="Change color"
             >
-              ●
+              <Palette className="size-3" />
             </PopoverTrigger>
             <PopoverContent align="start" className="w-auto p-2">
               <ColorPicker
@@ -134,10 +135,11 @@ const TableNode = memo(function TableNode({ id, data, selected }: NodeProps<Tabl
           </Popover>
           <Popover open={showNotes} onOpenChange={setShowNotes}>
             <PopoverTrigger
-              className={`rounded px-1 text-xs hover:bg-white/20 ${table.notes ? 'opacity-100' : 'opacity-60'}`}
+              className={`rounded p-1 hover:bg-white/20 ${table.notes ? 'opacity-100' : 'opacity-60'}`}
               data-testid={`notes-btn-${id}`}
+              title={table.notes ? 'Edit notes' : 'Add note'}
             >
-              ✎
+              <StickyNote className="size-3" />
             </PopoverTrigger>
             <PopoverContent align="end" className="w-56">
               <NotesPopover

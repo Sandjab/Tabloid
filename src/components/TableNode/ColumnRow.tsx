@@ -81,7 +81,7 @@ const ColumnRow = memo(function ColumnRow({
       data-testid={`column-row-${column.id}`}
     >
       <div
-        className="shrink-0 cursor-grab text-muted-foreground hover:text-foreground"
+        className="shrink-0 cursor-grab text-muted-foreground/40 transition-opacity hover:text-foreground group-hover/row:text-muted-foreground"
         draggable
         onDragStart={(e) => {
           e.dataTransfer.effectAllowed = 'move';
@@ -106,7 +106,7 @@ const ColumnRow = memo(function ColumnRow({
 
       {isEditing ? (
         <input
-          className="nowheel w-[120px] rounded border border-input px-1 text-sm"
+          className="nowheel min-w-[120px] flex-1 rounded border border-input px-1 text-sm"
           defaultValue={column.name}
           autoFocus
           onBlur={(e) => handleSubmit(e.target.value)}
@@ -118,7 +118,7 @@ const ColumnRow = memo(function ColumnRow({
         />
       ) : (
         <span
-          className={`w-[120px] cursor-pointer truncate ${
+          className={`min-w-[120px] flex-1 cursor-pointer truncate ${
             highlight === 'error'
               ? 'italic text-red-700 dark:text-red-400'
               : highlight === 'warning'

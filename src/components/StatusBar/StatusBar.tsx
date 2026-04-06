@@ -124,7 +124,7 @@ export default function StatusBar() {
           >
             {zoom}%
           </button>
-          <span className="text-muted-foreground/50">Proudly clauded by JP GAVINI 04/2026</span>
+          <span className="text-muted-foreground/70">Proudly clauded by JP GAVINI 04/2026</span>
         </div>
       </div>
     </div>
