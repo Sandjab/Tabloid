@@ -11,6 +11,11 @@ import type { RelationType } from '@/types/schema';
 const EDGE_SPREAD = 16;
 const BORDER_RADIUS = 8;
 const LABEL_OFFSET = 18;
+// React Flow's translate(50%) on handles pushes the reported sourceX/targetX
+// past the table border by half the handle width (w-2.5 = 10px → 5px).
+// Pull edge endpoints back so they land ~1px inside the border (hidden by
+// the table's opaque background), keeping handles visually centered on the edge.
+const HANDLE_HALF_W = 5;
 
 interface RelationEdgeData {
   relationType: RelationType;
@@ -83,9 +88,9 @@ const RelationEdge = memo(function RelationEdge({
     ? 0.5
     : 0.3 + (bundleIndex / (bundleCount - 1)) * 0.4;
 
-  // Handle centers sit ~1px inside the node border — nudge edges to the border
-  const sx = sourceX + 1;
-  const tx = targetX - 1;
+  // Edge endpoints pulled to ~1px inside the table border
+  const sx = sourceX - HANDLE_HALF_W;
+  const tx = targetX + HANDLE_HALF_W;
 
   const turnX = sx + (tx - sx) * stepPosition + spreadOffset;
 
