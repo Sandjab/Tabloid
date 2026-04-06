@@ -114,7 +114,7 @@ const TableNode = memo(function TableNode({ id, data, selected }: NodeProps<Tabl
             {table.name}
           </span>
         )}
-        <div className="nodrag flex shrink-0 items-center gap-0.5">
+        <div className="nodrag flex shrink-0 items-center gap-0.5" onDoubleClick={(e) => e.stopPropagation()}>
           <Popover open={showColorPicker} onOpenChange={setShowColorPicker}>
             <PopoverTrigger
               className="rounded p-1 hover:bg-white/20"
