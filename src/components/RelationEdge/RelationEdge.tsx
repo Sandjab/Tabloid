@@ -11,7 +11,7 @@ import { useSchemaStore } from '@/store/useSchemaStore';
 
 const EDGE_SPREAD = 16;
 const BORDER_RADIUS = 8;
-const LABEL_OFFSET = 18;
+const LABEL_OFFSET = 10;
 // React Flow's translate(50%) on handles pushes the reported sourceX/targetX
 // past the table border by half the handle width (w-[13px] → 6.5px).
 const HANDLE_HALF_W = 6.5;
@@ -284,9 +284,9 @@ const RelationEdge = memo(function RelationEdge({
       {showLabels && (
         <EdgeLabelRenderer>
           <div
-            className="nodrag nopan absolute z-10 cursor-pointer text-[10px] font-bold leading-none transition-colors hover:text-blue-600"
+            className="nodrag nopan absolute z-10 cursor-pointer text-xs font-bold leading-none transition-colors hover:text-blue-600"
             style={{
-              transform: `translate(-50%, -100%) translate(${srcLabelX}px,${srcLabelY - 4}px)`,
+              transform: `translate(-50%, -100%) translate(${srcLabelX}px,${srcLabelY - 3}px)`,
               color: edgeColor,
             }}
             title="Click to toggle"
@@ -296,9 +296,9 @@ const RelationEdge = memo(function RelationEdge({
             {sourceLabel}
           </div>
           <div
-            className="nodrag nopan absolute z-10 cursor-pointer text-[10px] font-bold leading-none transition-colors hover:text-blue-600"
+            className="nodrag nopan absolute z-10 cursor-pointer text-xs font-bold leading-none transition-colors hover:text-blue-600"
             style={{
-              transform: `translate(-50%, -100%) translate(${tgtLabelX}px,${tgtLabelY - 4}px)`,
+              transform: `translate(-50%, -100%) translate(${tgtLabelX}px,${tgtLabelY - 3}px)`,
               color: edgeColor,
             }}
             title="Click to toggle"
