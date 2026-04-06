@@ -15,9 +15,11 @@ import type {
   Index,
   Relation,
   RelationType,
+  HandleSide,
   TableNodeData,
 } from '@/types/schema';
-import { createTableId, createColumnId, createRelationId, makeHandleId } from '@/utils/id';
+import { DEFAULT_SOURCE_SIDE, DEFAULT_TARGET_SIDE } from '@/types/schema';
+import { createTableId, createColumnId, createRelationId, makeEdgeHandleId } from '@/utils/id';
 import { nextAvailableName } from '@/utils/naming';
 
 // --- Store interface ---
@@ -53,6 +55,8 @@ export interface SchemaState {
     targetTableId: string,
     targetColumnId: string,
     type: RelationType,
+    sourceSide?: HandleSide,
+    targetSide?: HandleSide,
   ) => string;
   removeRelation: (relationId: string) => void;
   updateRelationType: (relationId: string, type: RelationType) => void;
@@ -167,12 +171,14 @@ function buildEdgesFromRelations(relations: Relation[], tables: Table[]): Edge[]
     const targets = sortedTargets.get(r.sourceTableId) ?? [r.targetTableId];
     const bundleIndex = targets.indexOf(r.targetTableId);
     const bundleCount = targets.length;
+    const sourceSide = r.sourceSide ?? DEFAULT_SOURCE_SIDE;
+    const targetSide = r.targetSide ?? DEFAULT_TARGET_SIDE;
     return {
       id: r.id,
       source: r.sourceTableId,
-      sourceHandle: makeHandleId(r.sourceColumnId, 'source'),
+      sourceHandle: makeEdgeHandleId(r.sourceColumnId, sourceSide, 'source'),
       target: r.targetTableId,
-      targetHandle: makeHandleId(r.targetColumnId, 'target'),
+      targetHandle: makeEdgeHandleId(r.targetColumnId, targetSide, 'target'),
       type: 'relation',
       data: {
         relationType: r.type,
@@ -180,6 +186,8 @@ function buildEdgesFromRelations(relations: Relation[], tables: Table[]): Edge[]
         siblingCount: siblingInfo[i].count,
         bundleIndex,
         bundleCount,
+        sourceSide,
+        targetSide,
       },
     };
   });
@@ -435,14 +443,16 @@ export const useSchemaStore = create<SchemaState>()(
         );
       },
 
-      addRelation: (sourceTableId, sourceColumnId, targetTableId, targetColumnId, type) => {
+      addRelation: (sourceTableId, sourceColumnId, targetTableId, targetColumnId, type, sourceSide, targetSide) => {
         const id = createRelationId();
         const relation: Relation = {
           id,
           sourceTableId,
           sourceColumnId,
+          sourceSide,
           targetTableId,
           targetColumnId,
+          targetSide,
           type,
         };
         set((state) => {

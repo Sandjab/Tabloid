@@ -122,12 +122,21 @@ export function exportExcalidraw(tables: Table[], relations: Relation[]): string
     const tgtTable = tables.find((t) => t.id === rel.targetTableId);
 
     if (srcRectId && tgtRectId && srcTable && tgtTable) {
+      const srcSide = rel.sourceSide ?? 'right';
+      const tgtSide = rel.targetSide ?? 'left';
+      const startX = srcSide === 'right'
+        ? srcTable.position.x + COL_WIDTH
+        : srcTable.position.x;
+      const endX = tgtSide === 'left'
+        ? tgtTable.position.x
+        : tgtTable.position.x + COL_WIDTH;
+
       elements.push({
         id: nanoid(8),
         type: 'arrow',
-        x: srcTable.position.x + COL_WIDTH,
+        x: startX,
         y: srcTable.position.y + HEADER_H / 2,
-        width: tgtTable.position.x - srcTable.position.x - COL_WIDTH,
+        width: endX - startX,
         height: tgtTable.position.y - srcTable.position.y,
         strokeColor: '#1e1e1e',
         backgroundColor: 'transparent',
@@ -142,7 +151,7 @@ export function exportExcalidraw(tables: Table[], relations: Relation[]): string
         points: [
           [0, 0],
           [
-            tgtTable.position.x - srcTable.position.x - COL_WIDTH,
+            endX - startX,
             tgtTable.position.y - srcTable.position.y,
           ],
         ],

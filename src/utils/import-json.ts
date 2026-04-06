@@ -1,5 +1,5 @@
 import { COLUMN_TYPES } from '@/types/schema';
-import type { Table, Relation, Column, ColumnType } from '@/types/schema';
+import type { Table, Relation, Column, ColumnType, HandleSide } from '@/types/schema';
 
 interface ImportResult {
   tables: Table[];
@@ -76,12 +76,20 @@ function validateRelation(rel: unknown, index: number): Relation {
   }
   const type = r.type;
 
+  const validSides = ['left', 'right'];
+  const sourceSide = typeof r.sourceSide === 'string' && validSides.includes(r.sourceSide)
+    ? (r.sourceSide as HandleSide) : undefined;
+  const targetSide = typeof r.targetSide === 'string' && validSides.includes(r.targetSide)
+    ? (r.targetSide as HandleSide) : undefined;
+
   return {
     id: r.id,
     sourceTableId: r.sourceTableId,
     sourceColumnId: r.sourceColumnId,
+    sourceSide,
     targetTableId: r.targetTableId,
     targetColumnId: r.targetColumnId,
+    targetSide,
     type: type as Relation['type'],
   };
 }
@@ -99,7 +107,7 @@ export function importJSON(raw: string): ImportResult {
   }
 
   const doc = parsed as Record<string, unknown>;
-  if (doc.version !== 1) {
+  if (doc.version !== 1 && doc.version !== 2) {
     throw new Error(`Unsupported version: ${String(doc.version)}`);
   }
 

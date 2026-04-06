@@ -70,6 +70,13 @@ export interface Index {
   isUnique: boolean;
 }
 
+// --- Handle side ---
+
+export type HandleSide = 'left' | 'right';
+
+export const DEFAULT_SOURCE_SIDE: HandleSide = 'right';
+export const DEFAULT_TARGET_SIDE: HandleSide = 'left';
+
 // --- Relation ---
 
 export type RelationType =
@@ -77,13 +84,6 @@ export type RelationType =
   | 'one-to-many'
   | 'many-to-one'
   | 'many-to-many';
-
-export const RELATION_TYPE_LABELS: Record<RelationType, { long: string }> = {
-  'one-to-one': { long: '1:1 — One to One' },
-  'one-to-many': { long: '1:N — One to Many' },
-  'many-to-one': { long: 'N:1 — Many to One' },
-  'many-to-many': { long: 'N:N — Many to Many' },
-};
 
 export const ENDPOINT_LABELS: Record<RelationType, { source: string; target: string }> = {
   'one-to-one':   { source: '1', target: '1' },
@@ -99,8 +99,10 @@ export interface Relation {
   id: string;
   sourceTableId: string;
   sourceColumnId: string;
+  sourceSide?: HandleSide;
   targetTableId: string;
   targetColumnId: string;
+  targetSide?: HandleSide;
   type: RelationType;
 }
 

@@ -43,6 +43,37 @@ describe('JSON round-trip', () => {
   });
 });
 
+describe('JSON round-trip with sides', () => {
+  it('preserves sourceSide and targetSide', () => {
+    const relations: Relation[] = [{
+      id: 'r1',
+      sourceTableId: 't1',
+      sourceColumnId: 'c1',
+      sourceSide: 'left',
+      targetTableId: 't2',
+      targetColumnId: 'c2',
+      targetSide: 'right',
+      type: 'one-to-many',
+    }];
+    const json = exportJSON(TABLES, relations, 'test');
+    const result = importJSON(json);
+    expect(result.relations[0].sourceSide).toBe('left');
+    expect(result.relations[0].targetSide).toBe('right');
+  });
+
+  it('imports v1 JSON without sides gracefully', () => {
+    const v1Json = JSON.stringify({
+      version: 1,
+      name: 'v1 schema',
+      tables: TABLES,
+      relations: RELATIONS,
+    });
+    const result = importJSON(v1Json);
+    expect(result.relations[0].sourceSide).toBeUndefined();
+    expect(result.relations[0].targetSide).toBeUndefined();
+  });
+});
+
 describe('importJSON validation', () => {
   it('rejects invalid JSON', () => {
     expect(() => importJSON('not json')).toThrow('Invalid JSON');

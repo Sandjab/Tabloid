@@ -15,6 +15,15 @@
 }
 
 
+/* Lift edge labels above the pane (z-index:1) so they're clickable */
+.react-flow__edgelabel-renderer {
+  z-index: 2 !important;
+  pointer-events: none;
+}
+.react-flow__edgelabel-renderer > * {
+  pointer-events: all;
+}
+
 /* MiniMap styling */
 .react-flow__minimap-mask {
   fill: rgb(0 0 0 / 0.15);

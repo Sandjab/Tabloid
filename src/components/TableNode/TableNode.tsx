@@ -3,7 +3,6 @@ import { Handle, Position, useReactFlow } from '@xyflow/react';
 import type { NodeProps } from '@xyflow/react';
 import { useSchemaStore } from '@/store/useSchemaStore';
 import { useInlineEdit } from '@/hooks/useInlineEdit';
-import { makeHandleId } from '@/utils/id';
 import type { TableFlowNode } from '@/types/schema';
 import { useTableHighlight } from '@/hooks/useHighlight';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -228,19 +227,33 @@ const TableNode = memo(function TableNode({ id, data, selected }: NodeProps<Tabl
               }}
               onDragOverIndex={setDragOverIndex}
             />
+            {/* Left: visible handle + hidden twin for edge rendering */}
             <Handle
               type="target"
               position={Position.Left}
-              id={makeHandleId(column.id, 'target')}
-              className="!left-0 !h-2.5 !w-2.5 !border-2 !border-white !bg-blue-500 !opacity-0 transition-opacity hover:!opacity-100"
-              data-testid={`handle-target-${column.id}`}
+              id={`${column.id}-left-target`}
+              className="!left-0 !h-[13px] !w-[13px] !border-2 !border-white !bg-blue-500 !opacity-0 transition-opacity hover:!opacity-100"
+              data-testid={`handle-left-${column.id}`}
             />
             <Handle
               type="source"
+              position={Position.Left}
+              id={`${column.id}-left-source`}
+              className="!left-0 !h-[13px] !w-[13px] !opacity-0 !pointer-events-none"
+            />
+            {/* Right: visible handle + hidden twin for edge rendering */}
+            <Handle
+              type="source"
               position={Position.Right}
-              id={makeHandleId(column.id, 'source')}
-              className="!right-0 !h-2.5 !w-2.5 !border-2 !border-white !bg-blue-500 !opacity-0 transition-opacity hover:!opacity-100"
-              data-testid={`handle-source-${column.id}`}
+              id={`${column.id}-right-source`}
+              className="!right-0 !h-[13px] !w-[13px] !border-2 !border-white !bg-blue-500 !opacity-0 transition-opacity hover:!opacity-100"
+              data-testid={`handle-right-${column.id}`}
+            />
+            <Handle
+              type="target"
+              position={Position.Right}
+              id={`${column.id}-right-target`}
+              className="!right-0 !h-[13px] !w-[13px] !opacity-0 !pointer-events-none"
             />
           </div>
         ))}

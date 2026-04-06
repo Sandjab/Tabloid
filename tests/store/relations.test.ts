@@ -81,3 +81,52 @@ describe('removeColumn cleans up relations', () => {
     expect(useSchemaStore.getState().edges).toHaveLength(0);
   });
 });
+
+describe('addRelation with sides', () => {
+  it('stores sourceSide and targetSide', () => {
+    const { id1, id2, col1, col2 } = createTwoTables();
+    useSchemaStore.getState().addRelation(id1, col1, id2, col2, 'one-to-many', 'left', 'right');
+
+    const rel = useSchemaStore.getState().relations[0];
+    expect(rel.sourceSide).toBe('left');
+    expect(rel.targetSide).toBe('right');
+  });
+
+  it('defaults sides to undefined when not provided', () => {
+    const { id1, id2, col1, col2 } = createTwoTables();
+    useSchemaStore.getState().addRelation(id1, col1, id2, col2, 'one-to-many');
+
+    const rel = useSchemaStore.getState().relations[0];
+    expect(rel.sourceSide).toBeUndefined();
+    expect(rel.targetSide).toBeUndefined();
+  });
+
+  it('builds edges with correct handle IDs for non-default sides', () => {
+    const { id1, id2, col1, col2 } = createTwoTables();
+    useSchemaStore.getState().addRelation(id1, col1, id2, col2, 'one-to-many', 'left', 'right');
+
+    const edge = useSchemaStore.getState().edges[0];
+    expect(edge.sourceHandle).toBe(`${col1}-left-source`);
+    expect(edge.targetHandle).toBe(`${col2}-right-target`);
+  });
+});
+
+describe('self-referencing relation', () => {
+  it('allows relation between different columns of the same table', () => {
+    const id1 = useSchemaStore.getState().addTable({ x: 0, y: 0 });
+    useSchemaStore.getState().addColumn(id1);
+    const cols = useSchemaStore.getState().tables[0].columns;
+    const col1 = cols[0].id;
+    const col2 = cols[1].id;
+
+    const relId = useSchemaStore.getState().addRelation(id1, col1, id1, col2, 'one-to-many', 'right', 'right');
+
+    const { relations, edges } = useSchemaStore.getState();
+    expect(relations).toHaveLength(1);
+    expect(relations[0].sourceTableId).toBe(id1);
+    expect(relations[0].targetTableId).toBe(id1);
+    expect(edges).toHaveLength(1);
+    expect(edges[0].source).toBe(id1);
+    expect(edges[0].target).toBe(id1);
+  });
+});

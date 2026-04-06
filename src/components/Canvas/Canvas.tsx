@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   ReactFlow,
   Background,
   Controls,
   MiniMap,
+  ConnectionMode,
   SelectionMode,
   useReactFlow,
   getNodesBounds,
@@ -12,7 +13,7 @@ import {
 import type { NodeTypes, EdgeTypes, Connection, IsValidConnection } from '@xyflow/react';
 import { useSchemaStore } from '@/store/useSchemaStore';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
-import { parseHandleId } from '@/utils/id';
+import { parseHandleId, parseHandleSide } from '@/utils/id';
 import { computeAutoLayout } from '@/utils/auto-layout';
 import {
   ContextMenu,
@@ -26,9 +27,8 @@ import { isMac } from '@/utils/platform';
 import { Plus, Maximize, LayoutGrid, MousePointerClick } from 'lucide-react';
 import TableNode from '@/components/TableNode/TableNode';
 import RelationEdge from '@/components/RelationEdge/RelationEdge';
-import RelationTypeDialog from '@/components/RelationTypeDialog/RelationTypeDialog';
 import StatusBar from '@/components/StatusBar/StatusBar';
-import type { RelationType, TableNodeData } from '@/types/schema';
+import type { TableNodeData } from '@/types/schema';
 
 const nodeTypes: NodeTypes = {
   table: TableNode,
@@ -39,13 +39,6 @@ const edgeTypes: EdgeTypes = {
 };
 
 const DOUBLE_CLICK_THRESHOLD = 300;
-
-interface PendingConnection {
-  sourceTableId: string;
-  sourceColumnId: string;
-  targetTableId: string;
-  targetColumnId: string;
-}
 
 interface CanvasProps {
   onSearchOpen: () => void;
@@ -79,7 +72,6 @@ export default function Canvas({ onSearchOpen }: CanvasProps) {
   const lastPaneClickTime = useRef(0);
   const canvasRef = useRef<HTMLDivElement>(null);
   const contextMenuPos = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [pendingConnection, setPendingConnection] = useState<PendingConnection | null>(null);
 
   const handleAddTableHere = useCallback(() => {
     const position = screenToFlowPosition(contextMenuPos.current);
@@ -149,34 +141,18 @@ export default function Canvas({ onSearchOpen }: CanvasProps) {
       if (!connection.source || !connection.target) return;
       if (!connection.sourceHandle || !connection.targetHandle) return;
 
-      setPendingConnection({
-        sourceTableId: connection.source,
-        sourceColumnId: parseHandleId(connection.sourceHandle),
-        targetTableId: connection.target,
-        targetColumnId: parseHandleId(connection.targetHandle),
-      });
-    },
-    [],
-  );
-
-  const handleRelationConfirm = useCallback(
-    (type: RelationType) => {
-      if (!pendingConnection) return;
       addRelation(
-        pendingConnection.sourceTableId,
-        pendingConnection.sourceColumnId,
-        pendingConnection.targetTableId,
-        pendingConnection.targetColumnId,
-        type,
+        connection.source,
+        parseHandleId(connection.sourceHandle),
+        connection.target,
+        parseHandleId(connection.targetHandle),
+        'one-to-many',
+        parseHandleSide(connection.sourceHandle),
+        parseHandleSide(connection.targetHandle),
       );
-      setPendingConnection(null);
     },
-    [pendingConnection, addRelation],
+    [addRelation],
   );
-
-  const handleRelationCancel = useCallback(() => {
-    setPendingConnection(null);
-  }, []);
 
   const isValidConnection: IsValidConnection = useCallback(
     (connection) => {
@@ -226,6 +202,8 @@ export default function Canvas({ onSearchOpen }: CanvasProps) {
         onConnect={handleConnect}
         onEdgesDelete={handleEdgesDelete}
         isValidConnection={isValidConnection}
+        connectionMode={ConnectionMode.Loose}
+        connectionRadius={40}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onPaneClick={handlePaneClick}
@@ -255,11 +233,6 @@ export default function Canvas({ onSearchOpen }: CanvasProps) {
           </div>
         )}
       </ReactFlow>
-      <RelationTypeDialog
-        open={!!pendingConnection}
-        onConfirm={handleRelationConfirm}
-        onCancel={handleRelationCancel}
-      />
       </div>
       <StatusBar />
     </ContextMenuTrigger>

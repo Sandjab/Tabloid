@@ -5,7 +5,7 @@ export function buildSchema(
   relations: Relation[],
   name: string,
 ): Schema {
-  return { version: 1, name, tables, relations };
+  return { version: 2, name, tables, relations };
 }
 
 export function exportJSON(
