@@ -165,8 +165,6 @@ function injectPrintMode(): void {
 
     const mMatch = d.match(/^M\s+([\d.-]+),([\d.-]+)/);
     if (!mMatch) return;
-    const my = parseFloat(mMatch[2]);
-
     const lMatches = [...d.matchAll(/L\s+([\d.-]+),([\d.-]+)/g)];
     if (lMatches.length === 0) return;
     const lastL = lMatches[lMatches.length - 1];

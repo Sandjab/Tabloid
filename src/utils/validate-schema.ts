@@ -8,7 +8,8 @@ export interface ValidationWarning {
     | 'duplicate-column-name'
     | 'missing-primary-key'
     | 'empty-table'
-    | 'index-missing-column';
+    | 'index-missing-column'
+    | 'nn-direct-relation';
   severity: 'error' | 'warning';
   tableId: string;
   columnId?: string;
