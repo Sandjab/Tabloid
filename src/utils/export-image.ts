@@ -4,12 +4,11 @@ import { useSchemaStore } from '@/store/useSchemaStore';
 import { downloadDataUrl } from './download';
 
 const PADDING = 40;
-const EDGE_COLOR = '#8b9bb5';
 const PRINT_STYLE_ID = 'tabloid-print-style';
 const PRINT_CLASS = 'tabloid-print';
 
 const PRINT_CSS = `
-/* Table card: white bg, no shadow, clean border */
+/* === TABLE CARDS === */
 .${PRINT_CLASS} .react-flow__node > div {
   box-shadow: none !important;
   background: #ffffff !important;
@@ -17,15 +16,16 @@ const PRINT_CSS = `
   --tw-ring-shadow: 0 0 #0000 !important;
   --tw-ring-color: transparent !important;
 }
-/* Force dark text on all node content (fixes dark theme white-on-white) */
+/* Force dark text on all node content (fixes dark theme) */
 .${PRINT_CLASS} .react-flow__node * {
   color: #1f2937 !important;
 }
 /* Keep header text white on colored background */
-.${PRINT_CLASS} .react-flow__node .rounded-t-md[style*="background-color"] *:not(button):not(.nodrag *) {
+.${PRINT_CLASS} .react-flow__node [style*="background-color"] * {
   color: #ffffff !important;
 }
-/* Hide interactive UI chrome */
+
+/* === HIDE INTERACTIVE CHROME === */
 .${PRINT_CLASS} .react-flow__handle {
   opacity: 0 !important;
 }
@@ -35,27 +35,52 @@ const PRINT_CSS = `
 .${PRINT_CLASS} [data-testid^="column-remove"] {
   display: none !important;
 }
-.${PRINT_CLASS} .rounded-t-md .nodrag {
+/* Header action buttons (Palette, StickyNote, +) */
+.${PRINT_CLASS} [style*="background-color"] .nodrag {
   display: none !important;
 }
-/* Make select look like plain text (no chevron) */
+/* "+ Add index" button */
+.${PRINT_CLASS} [data-testid^="add-index-btn"] {
+  display: none !important;
+}
+
+/* === STATIC LOOK === */
+.${PRINT_CLASS} .react-flow__node button {
+  cursor: default !important;
+  pointer-events: none !important;
+}
 .${PRINT_CLASS} .react-flow__node select {
   appearance: none !important;
   border: none !important;
   background: transparent !important;
   padding: 0 !important;
   color: #6b7280 !important;
+  pointer-events: none !important;
 }
-/* Edge endpoint labels */
-.${PRINT_CLASS} .nodrag.nopan {
-  color: #6b7280 !important;
+.${PRINT_CLASS} [data-testid^="index-row"] {
+  cursor: default !important;
+  pointer-events: none !important;
 }
-/* NN/UQ active badges: keep their colors */
+
+/* === CONSTRAINT COLORS === */
 .${PRINT_CLASS} .text-rose-500 { color: #ef4444 !important; }
 .${PRINT_CLASS} .text-violet-500 { color: #8b5cf6 !important; }
 .${PRINT_CLASS} .text-amber-500 { color: #f59e0b !important; }
-/* Inactive badges: subtle gray */
 .${PRINT_CLASS} .text-muted-foreground\\/60 { color: #d1d5db !important; }
+/* Inactive PK dot: hide */
+.${PRINT_CLASS} .text-border { color: transparent !important; }
+
+/* === EDGES === */
+/* Hide selection glow layer */
+.${PRINT_CLASS} .react-flow__edge path[stroke-opacity="0.15"] {
+  display: none !important;
+}
+/* Edge labels: static, muted */
+.${PRINT_CLASS} .react-flow__edgelabel-renderer .nodrag {
+  cursor: default !important;
+  pointer-events: none !important;
+  color: #6b7280 !important;
+}
 `;
 
 function getViewportElement(): HTMLElement {
@@ -70,8 +95,8 @@ function getReactFlowWrapper(): HTMLElement {
   return el;
 }
 
-// Saved bridge stroke attributes to restore after capture
-let savedBridgeStrokes: { el: Element; attr: string; value: string }[] = [];
+// Saved modifications to restore after capture
+let savedStrokes: { el: Element; type: 'attr' | 'style'; key: string; value: string }[] = [];
 
 function injectPrintMode(): void {
   const style = document.createElement('style');
@@ -80,17 +105,93 @@ function injectPrintMode(): void {
   document.head.appendChild(style);
   getReactFlowWrapper().classList.add(PRINT_CLASS);
 
-  // Change bridge path stroke from white/dark to edge color so
-  // the wider bridge extends the visible line to the table borders.
-  // (In the live viewport, the bridge creates a "crossing" effect;
-  //  in print on white bg, we repurpose it as line extension.)
-  savedBridgeStrokes = [];
+  savedStrokes = [];
+  const rootStyle = getComputedStyle(document.documentElement);
+
   document.querySelectorAll('.react-flow__edge path').forEach((path) => {
-    const stroke = path.getAttribute('stroke');
-    if (stroke === 'white') {
-      savedBridgeStrokes.push({ el: path, attr: 'stroke', value: stroke });
-      path.setAttribute('stroke', EDGE_COLOR);
+    const svgEl = path as SVGElement;
+
+    // Resolve CSS variable strokes (e.g. var(--edge-color)) to computed values
+    // so html-to-image can render them correctly
+    const inlineStroke = svgEl.style.stroke;
+    if (inlineStroke?.startsWith('var(')) {
+      const varName = inlineStroke.slice(4, inlineStroke.indexOf(')')).trim();
+      const resolved = rootStyle.getPropertyValue(varName).trim();
+      if (resolved) {
+        savedStrokes.push({ el: path, type: 'style', key: 'stroke', value: inlineStroke });
+        svgEl.style.stroke = resolved;
+      }
     }
+
+    // Hide bridge paths — white on white bg is already invisible,
+    // but force display:none to be safe
+    const attrStroke = path.getAttribute('stroke');
+    if (attrStroke === 'white') {
+      savedStrokes.push({ el: path, type: 'style', key: 'display', value: svgEl.style.display || '' });
+      svgEl.style.display = 'none';
+    }
+  });
+
+  // Extend edge path endpoints to exactly reach table borders.
+  // Compute exact border X from node positions instead of guessing offsets.
+  const { edges, nodes: storeNodes } = useSchemaStore.getState();
+  const edgeMap = new Map(edges.map((e) => [e.id, e]));
+  const nodeMap = new Map(storeNodes.map((n) => [n.id, n]));
+
+  // Current viewport zoom
+  const vpEl = document.querySelector('.react-flow__viewport');
+  const zoomMatch = vpEl?.getAttribute('style')?.match(/scale\(([\d.]+)\)/);
+  const zoom = zoomMatch ? parseFloat(zoomMatch[1]) : 1;
+
+  // Get measured node widths from the DOM (accounts for flex content)
+  const measuredWidths = new Map<string, number>();
+  document.querySelectorAll('.react-flow__node').forEach((el) => {
+    const id = el.getAttribute('data-id');
+    if (id) measuredWidths.set(id, el.getBoundingClientRect().width / zoom);
+  });
+
+  document.querySelectorAll('.react-flow__edge-path').forEach((path) => {
+    const edgeEl = path.closest('.react-flow__edge');
+    const edgeId = edgeEl?.getAttribute('data-id') ?? '';
+    const edge = edgeMap.get(edgeId);
+    if (!edge) return;
+
+    const srcNode = nodeMap.get(edge.source);
+    const tgtNode = nodeMap.get(edge.target);
+    if (!srcNode || !tgtNode) return;
+
+    const d = path.getAttribute('d');
+    if (!d) return;
+
+    const mMatch = d.match(/^M\s+([\d.-]+),([\d.-]+)/);
+    if (!mMatch) return;
+    const my = parseFloat(mMatch[2]);
+
+    const lMatches = [...d.matchAll(/L\s+([\d.-]+),([\d.-]+)/g)];
+    if (lMatches.length === 0) return;
+    const lastL = lMatches[lMatches.length - 1];
+    const lastY = parseFloat(lastL[2]);
+
+    const srcSide = edge.data?.sourceSide ?? 'right';
+    const tgtSide = edge.data?.targetSide ?? 'left';
+    const srcWidth = measuredWidths.get(edge.source) ?? (srcNode.measured?.width ?? 250);
+    const tgtWidth = measuredWidths.get(edge.target) ?? (tgtNode.measured?.width ?? 250);
+
+    // Exact border X positions (1px overshoot to cover sub-pixel gaps)
+    const srcBorderX = srcSide === 'right'
+      ? srcNode.position.x + srcWidth + 1
+      : srcNode.position.x - 1;
+    const tgtBorderX = tgtSide === 'right'
+      ? tgtNode.position.x + tgtWidth + 1
+      : tgtNode.position.x - 1;
+
+    savedStrokes.push({ el: path, type: 'attr', key: 'd', value: d });
+
+    let newD = d.replace(/^M\s+[\d.-]+,/, `M ${srcBorderX},`);
+    const lastLRegex = /L\s+([\d.-]+),([\d.-]+)(?![\s\S]*L\s)/;
+    newD = newD.replace(lastLRegex, `L ${tgtBorderX},${lastY}`);
+
+    path.setAttribute('d', newD);
   });
 }
 
@@ -98,10 +199,14 @@ function removePrintMode(): void {
   document.getElementById(PRINT_STYLE_ID)?.remove();
   document.querySelector(`.${PRINT_CLASS}`)?.classList.remove(PRINT_CLASS);
 
-  for (const { el, attr, value } of savedBridgeStrokes) {
-    el.setAttribute(attr, value);
+  for (const { el, type, key, value } of savedStrokes) {
+    if (type === 'style') {
+      (el as SVGElement).style.setProperty(key, value);
+    } else {
+      el.setAttribute(key, value);
+    }
   }
-  savedBridgeStrokes = [];
+  savedStrokes = [];
 }
 
 function filterChrome(node: HTMLElement): boolean {
