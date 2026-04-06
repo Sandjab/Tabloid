@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useSchemaStore } from '@/store/useSchemaStore';
 
 beforeEach(() => {
@@ -108,6 +108,76 @@ describe('addRelation with sides', () => {
     const edge = useSchemaStore.getState().edges[0];
     expect(edge.sourceHandle).toBe(`${col1}-left-source`);
     expect(edge.targetHandle).toBe(`${col2}-right-target`);
+  });
+});
+
+describe('convertToJunction', () => {
+  it('creates a junction table with 2 relations and removes the original', () => {
+    vi.useFakeTimers();
+    const { id1, id2, col1, col2 } = createTwoTables();
+    const relId = useSchemaStore.getState().addRelation(id1, col1, id2, col2, 'many-to-many');
+
+    useSchemaStore.getState().convertToJunction(relId);
+    vi.advanceTimersByTime(200);
+    vi.useRealTimers();
+
+    const { tables, relations } = useSchemaStore.getState();
+
+    // Original relation removed, 2 new ones
+    expect(relations).toHaveLength(2);
+    expect(relations.find((r) => r.id === relId)).toBeUndefined();
+
+    // Junction table created (3 tables total)
+    expect(tables).toHaveLength(3);
+    const junctionTable = tables[2];
+    expect(junctionTable.columns).toHaveLength(3); // id + 2 FK columns
+    expect(junctionTable.columns[0].name).toBe('id');
+    expect(junctionTable.columns[0].isPrimaryKey).toBe(true);
+  });
+
+  it('names the junction table {src}_{tgt}', () => {
+    const { id1, id2, col1, col2 } = createTwoTables();
+    const relId = useSchemaStore.getState().addRelation(id1, col1, id2, col2, 'many-to-many');
+
+    const srcName = useSchemaStore.getState().tables[0].name;
+    const tgtName = useSchemaStore.getState().tables[1].name;
+
+    useSchemaStore.getState().convertToJunction(relId);
+
+    const junctionTable = useSchemaStore.getState().tables[2];
+    expect(junctionTable.name).toBe(`${srcName}_${tgtName}`);
+  });
+
+  it('positions the junction table at the midpoint', () => {
+    const { id1, id2, col1, col2 } = createTwoTables();
+    const relId = useSchemaStore.getState().addRelation(id1, col1, id2, col2, 'many-to-many');
+
+    useSchemaStore.getState().convertToJunction(relId);
+
+    const junctionTable = useSchemaStore.getState().tables[2];
+    // Tables are at (0,0) and (300,0), midpoint is (150,0)
+    expect(junctionTable.position.x).toBe(150);
+    expect(junctionTable.position.y).toBe(0);
+  });
+
+  it('creates two one-to-many relations to the junction table', () => {
+    vi.useFakeTimers();
+    const { id1, id2, col1, col2 } = createTwoTables();
+    const relId = useSchemaStore.getState().addRelation(id1, col1, id2, col2, 'many-to-many');
+
+    useSchemaStore.getState().convertToJunction(relId);
+    vi.advanceTimersByTime(200);
+    vi.useRealTimers();
+
+    const { relations } = useSchemaStore.getState();
+    expect(relations).toHaveLength(2);
+    expect(relations[0].type).toBe('one-to-many');
+    expect(relations[1].type).toBe('one-to-many');
+
+    // Both target the junction table
+    const junctionId = useSchemaStore.getState().tables[2].id;
+    expect(relations[0].targetTableId).toBe(junctionId);
+    expect(relations[1].targetTableId).toBe(junctionId);
   });
 });
 

@@ -116,6 +116,17 @@ export function validateSchema(
         message: `FK between "${srcTable?.name}" and "${tgtTable?.name}" has incompatible types (${src.type} vs ${tgt.type})`,
       });
     }
+
+    if (rel.type === 'many-to-many') {
+      const srcTable = tables.find((t) => t.id === rel.sourceTableId);
+      const tgtTable = tables.find((t) => t.id === rel.targetTableId);
+      warnings.push({
+        type: 'nn-direct-relation',
+        severity: 'warning',
+        tableId: rel.sourceTableId,
+        message: `Direct N:N relation between "${srcTable?.name}" and "${tgtTable?.name}" — use a junction table`,
+      });
+    }
   }
 
   return warnings;

@@ -60,6 +60,7 @@ export interface SchemaState {
   ) => string;
   removeRelation: (relationId: string) => void;
   updateRelationType: (relationId: string, type: RelationType) => void;
+  convertToJunction: (relationId: string) => void;
 
   updateTableColor: (tableId: string, color: string | undefined) => void;
   updateTableNotes: (tableId: string, notes: string | undefined) => void;
@@ -485,6 +486,124 @@ export const useSchemaStore = create<SchemaState>()(
             edges: buildEdgesFromRelations(updatedRelations, state.tables),
           };
         });
+      },
+
+      convertToJunction: (relationId) => {
+        const state = get();
+        const relation = state.relations.find((r) => r.id === relationId);
+        if (!relation) return;
+
+        const srcTable = state.tables.find((t) => t.id === relation.sourceTableId);
+        const tgtTable = state.tables.find((t) => t.id === relation.targetTableId);
+        if (!srcTable || !tgtTable) return;
+
+        const srcCol = srcTable.columns.find((c) => c.id === relation.sourceColumnId);
+        const tgtCol = tgtTable.columns.find((c) => c.id === relation.targetColumnId);
+        if (!srcCol || !tgtCol) return;
+
+        // Pause undo tracking for atomic operation
+        const temporal = useSchemaStore.temporal.getState();
+        temporal.pause();
+
+        try {
+          // Junction table name and position
+          const existingNames = state.tables.map((t) => t.name);
+          let junctionName = `${srcTable.name}_${tgtTable.name}`;
+          if (existingNames.includes(junctionName)) {
+            junctionName = nextAvailableName(`${junctionName}_`, existingNames);
+          }
+          const midPos = {
+            x: (srcTable.position.x + tgtTable.position.x) / 2,
+            y: (srcTable.position.y + tgtTable.position.y) / 2,
+          };
+
+          // Create junction table with PK + 2 FK columns
+          const junctionId = createTableId();
+          const pkCol: Column = {
+            id: createColumnId(),
+            name: 'id',
+            type: 'SERIAL',
+            isPrimaryKey: true,
+            isNullable: false,
+            isUnique: false,
+          };
+          const fkSrcCol: Column = {
+            id: createColumnId(),
+            name: `${srcTable.name}_id`,
+            type: srcCol.type,
+            isPrimaryKey: false,
+            isNullable: false,
+            isUnique: false,
+          };
+          const fkTgtCol: Column = {
+            id: createColumnId(),
+            name: `${tgtTable.name}_id`,
+            type: tgtCol.type,
+            isPrimaryKey: false,
+            isNullable: false,
+            isUnique: false,
+          };
+          const junctionTable: Table = {
+            id: junctionId,
+            name: junctionName,
+            columns: [pkCol, fkSrcCol, fkTgtCol],
+            position: midPos,
+          };
+          const junctionNode: Node<TableNodeData> = {
+            id: junctionId,
+            type: 'table',
+            position: midPos,
+            data: { table: junctionTable },
+          };
+
+          // Two new 1:N relations
+          const rel1: Relation = {
+            id: createRelationId(),
+            sourceTableId: srcTable.id,
+            sourceColumnId: srcCol.id,
+            sourceSide: relation.sourceSide,
+            targetTableId: junctionId,
+            targetColumnId: fkSrcCol.id,
+            targetSide: relation.sourceSide === 'left' ? 'left' : 'left',
+            type: 'one-to-many',
+          };
+          const rel2: Relation = {
+            id: createRelationId(),
+            sourceTableId: tgtTable.id,
+            sourceColumnId: tgtCol.id,
+            sourceSide: relation.targetSide,
+            targetTableId: junctionId,
+            targetColumnId: fkTgtCol.id,
+            targetSide: relation.targetSide === 'right' ? 'right' : 'right',
+            type: 'one-to-many',
+          };
+
+          // First: add junction table + remove original relation (table appears)
+          set((s) => {
+            const updatedTables = [...s.tables, junctionTable];
+            const updatedRelations = s.relations.filter((r) => r.id !== relationId);
+            return {
+              tables: updatedTables,
+              nodes: [...s.nodes, junctionNode],
+              relations: updatedRelations,
+              edges: buildEdgesFromRelations(updatedRelations, updatedTables),
+            };
+          });
+
+          // Then: add the two 1:N relations after a short delay so edges appear after the table
+          setTimeout(() => {
+            set((s) => {
+              const updatedRelations = [...s.relations, rel1, rel2];
+              return {
+                relations: updatedRelations,
+                edges: buildEdgesFromRelations(updatedRelations, s.tables),
+              };
+            });
+            temporal.resume();
+          }, 150);
+        } catch {
+          temporal.resume();
+        }
       },
 
       updateTableColor: (tableId, color) => {

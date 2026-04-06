@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useRef, useState, useEffect } from 'react';
 import {
   BaseEdge,
   EdgeLabelRenderer,
@@ -8,6 +8,7 @@ import type { EdgeProps, Edge } from '@xyflow/react';
 import { ENDPOINT_LABELS, EDGE_COLOR, EDGE_COLOR_SELECTED } from '@/types/schema';
 import type { RelationType, HandleSide } from '@/types/schema';
 import { useSchemaStore } from '@/store/useSchemaStore';
+import { toast } from 'sonner';
 
 const EDGE_SPREAD = 16;
 const BORDER_RADIUS = 8;
@@ -243,6 +244,42 @@ const RelationEdge = memo(function RelationEdge({
   const showLabels = Math.sqrt(dx * dx + dy * dy) >= 50;
 
   const updateRelationType = useSchemaStore((s) => s.updateRelationType);
+  const convertToJunction = useSchemaStore((s) => s.convertToJunction);
+
+  // Ghost preview state for N:N → junction table
+  const [ghostVisible, setGhostVisible] = useState(false);
+  const ghostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const solidifyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevTypeRef = useRef<RelationType | null>(null);
+
+  const cancelGhost = () => {
+    if (ghostTimerRef.current) { clearTimeout(ghostTimerRef.current); ghostTimerRef.current = null; }
+    if (solidifyTimerRef.current) { clearTimeout(solidifyTimerRef.current); solidifyTimerRef.current = null; }
+    setGhostVisible(false);
+  };
+
+  // Cleanup on unmount
+  useEffect(() => cancelGhost, []);
+
+  // Click-outside detection: cancel ghost when clicking anywhere except the ghost
+  useEffect(() => {
+    if (!ghostVisible) return;
+    const handleClickOutside = () => {
+      cancelGhost();
+      if (prevTypeRef.current) {
+        updateRelationType(id, prevTypeRef.current);
+        prevTypeRef.current = null;
+      }
+    };
+    // Delay to avoid catching the click that triggered the ghost
+    const timer = setTimeout(() => {
+      document.addEventListener('pointerdown', handleClickOutside, { once: true });
+    }, 50);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('pointerdown', handleClickOutside);
+    };
+  }, [ghostVisible, id, updateRelationType]);
 
   const handleLabelClick = (endpoint: 'source' | 'target') => (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -251,8 +288,79 @@ const RelationEdge = memo(function RelationEdge({
     const newLabel = current === '1' ? 'N' : '1';
     const newSource = endpoint === 'source' ? newLabel : labels.source;
     const newTarget = endpoint === 'target' ? newLabel : labels.target;
-    updateRelationType(id, LABEL_TYPE_MAP[`${newSource}-${newTarget}`]);
+    const newType = LABEL_TYPE_MAP[`${newSource}-${newTarget}`];
+
+    if (newType === 'many-to-many') {
+      // Cancel any existing ghost timer (re-click scenario)
+      cancelGhost();
+
+      // Remember previous type for cancel/revert
+      prevTypeRef.current = relationType;
+
+      // Show N:N labels immediately
+      updateRelationType(id, 'many-to-many');
+
+      // Schedule ghost preview at 200ms
+      ghostTimerRef.current = setTimeout(() => setGhostVisible(true), 200);
+
+      // Convert to junction table at 1700ms
+      solidifyTimerRef.current = setTimeout(() => {
+        const state = useSchemaStore.getState();
+        const rel = state.relations.find((r) => r.id === id);
+        if (!rel) return;
+        const srcTable = state.tables.find((t) => t.id === rel.sourceTableId);
+        const tgtTable = state.tables.find((t) => t.id === rel.targetTableId);
+        const junctionName = `${srcTable?.name ?? 'table'}_${tgtTable?.name ?? 'table'}`;
+
+        convertToJunction(id);
+
+        toast(`Junction table "${junctionName}" created`, {
+          action: {
+            label: 'Undo',
+            onClick: () => {
+              const temporal = useSchemaStore.temporal.getState();
+              temporal.undo();
+              temporal.pause();
+              try { useSchemaStore.getState().rebuildNodesFromTables(); }
+              finally { temporal.resume(); }
+            },
+          },
+          duration: 4000,
+        });
+      }, 1700);
+    } else {
+      // Normal toggle — also cancel any pending ghost
+      cancelGhost();
+      updateRelationType(id, newType);
+    }
   };
+
+  // Ghost click → solidify immediately
+  const handleGhostClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    cancelGhost();
+
+    const state = useSchemaStore.getState();
+    const rel = state.relations.find((r) => r.id === id);
+    if (!rel) return;
+    const srcTable = state.tables.find((t) => t.id === rel.sourceTableId);
+    const tgtTable = state.tables.find((t) => t.id === rel.targetTableId);
+    const junctionName = `${srcTable?.name ?? 'table'}_${tgtTable?.name ?? 'table'}`;
+
+    convertToJunction(id);
+
+    toast(`Junction table "${junctionName}" created`, {
+      action: {
+        label: 'Undo',
+        onClick: () => useSchemaStore.temporal.getState().undo(),
+      },
+      duration: 4000,
+    });
+  };
+
+  // Ghost position at midpoint
+  const ghostX = (sourceX + targetX) / 2;
+  const ghostY = (sourceY + targetY) / 2;
 
   return (
     <>
@@ -306,6 +414,25 @@ const RelationEdge = memo(function RelationEdge({
             onClick={handleLabelClick('target')}
           >
             {targetLabel}
+          </div>
+        </EdgeLabelRenderer>
+      )}
+      {/* Ghost junction table preview */}
+      {ghostVisible && (
+        <EdgeLabelRenderer>
+          <div
+            className="nodrag nopan absolute z-20 cursor-pointer rounded-lg border-2 border-dashed border-blue-400 bg-white/80 px-3 py-2 text-xs shadow-sm dark:bg-gray-800/80"
+            style={{
+              transform: `translate(-50%, -50%) translate(${ghostX}px,${ghostY}px)`,
+              opacity: 0.6,
+            }}
+            onClick={handleGhostClick}
+            title="Click to create now"
+          >
+            <div className="mb-1 font-semibold text-blue-500">
+              Junction table
+            </div>
+            <div className="text-muted-foreground">Click in or out</div>
           </div>
         </EdgeLabelRenderer>
       )}
