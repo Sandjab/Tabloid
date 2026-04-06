@@ -66,6 +66,7 @@ export interface SchemaState {
   updateTableNotes: (tableId: string, notes: string | undefined) => void;
   addIndex: (tableId: string, name: string, columnIds: string[], isUnique: boolean) => void;
   removeIndex: (tableId: string, indexId: string) => void;
+  updateIndex: (tableId: string, indexId: string, updates: Partial<Pick<Index, 'name' | 'columnIds' | 'isUnique'>>) => void;
 
   duplicateTable: (tableId: string) => string;
   updateTablePositions: (positions: Map<string, { x: number; y: number }>) => void;
@@ -543,10 +544,17 @@ export const useSchemaStore = create<SchemaState>()(
             isNullable: false,
             isUnique: false,
           };
+          const compositeIndex: Index = {
+            id: `idx_${createColumnId().slice(4)}`,
+            name: `idx_${junctionName}`,
+            columnIds: [fkSrcCol.id, fkTgtCol.id],
+            isUnique: true,
+          };
           const junctionTable: Table = {
             id: junctionId,
             name: junctionName,
             columns: [pkCol, fkSrcCol, fkTgtCol],
+            indexes: [compositeIndex],
             position: midPos,
           };
           const junctionNode: Node<TableNodeData> = {
@@ -639,6 +647,17 @@ export const useSchemaStore = create<SchemaState>()(
           updateTableInState(state.tables, state.nodes, tableId, (t) => ({
             ...t,
             indexes: (t.indexes ?? []).filter((idx) => idx.id !== indexId),
+          })),
+        );
+      },
+
+      updateIndex: (tableId, indexId, updates) => {
+        set((state) =>
+          updateTableInState(state.tables, state.nodes, tableId, (t) => ({
+            ...t,
+            indexes: (t.indexes ?? []).map((idx) =>
+              idx.id === indexId ? { ...idx, ...updates } : idx,
+            ),
           })),
         );
       },

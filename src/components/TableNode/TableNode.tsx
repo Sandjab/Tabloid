@@ -18,10 +18,12 @@ import {
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 import { isMac } from '@/utils/platform';
-import { Plus, Copy, Pencil, StickyNote, Trash2, Palette } from 'lucide-react';
+import { Plus, Copy, Pencil, StickyNote, Trash2, Palette, ListOrdered } from 'lucide-react';
 import ColumnRow from './ColumnRow';
 import ColorPicker from './ColorPicker';
 import NotesPopover from './NotesPopover';
+import IndexSection from './IndexSection';
+import IndexDialog from './IndexDialog';
 
 const TableNode = memo(function TableNode({ id, data, selected }: NodeProps<TableFlowNode>) {
   const { table } = data;
@@ -34,8 +36,11 @@ const TableNode = memo(function TableNode({ id, data, selected }: NodeProps<Tabl
 
   const highlight = useTableHighlight(id);
 
+  const addIndex = useSchemaStore((s) => s.addIndex);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
+  const [showIndexDialog, setShowIndexDialog] = useState(false);
+  const [indexHighlightIds, setIndexHighlightIds] = useState<string[]>([]);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const moveColumn = useSchemaStore((s) => s.moveColumn);
@@ -161,6 +166,10 @@ const TableNode = memo(function TableNode({ id, data, selected }: NodeProps<Tabl
           <Plus className="mr-2 size-3.5" />
           Add column
         </ContextMenuItem>
+        <ContextMenuItem onClick={() => setShowIndexDialog(true)} data-testid={`ctx-add-index-${id}`}>
+          <ListOrdered className="mr-2 size-3.5" />
+          Add index
+        </ContextMenuItem>
         <ContextMenuItem onClick={() => duplicateTable(id)} data-testid={`ctx-duplicate-${id}`}>
           <Copy className="mr-2 size-3.5" />
           Duplicate table
@@ -217,6 +226,7 @@ const TableNode = memo(function TableNode({ id, data, selected }: NodeProps<Tabl
               isDragging={draggedIndex === index}
               isDragOver={dragOverIndex === index}
               dragBelow={draggedIndex !== null && draggedIndex < index}
+              isIndexHighlighted={indexHighlightIds.includes(column.id)}
               onDragStart={() => setDraggedIndex(index)}
               onDragEnd={() => {
                 if (draggedIndex !== null && dragOverIndex !== null && draggedIndex !== dragOverIndex) {
@@ -262,7 +272,27 @@ const TableNode = memo(function TableNode({ id, data, selected }: NodeProps<Tabl
             No columns
           </div>
         )}
+        {/* Index section — only visible when indexes exist */}
+        {table.indexes && table.indexes.length > 0 && (
+          <IndexSection
+            tableId={id}
+            indexes={table.indexes}
+            columns={table.columns}
+            onHoverIndex={setIndexHighlightIds}
+          />
+        )}
       </div>
+
+      {/* Index dialog triggered from context menu */}
+      <IndexDialog
+        open={showIndexDialog}
+        columns={table.columns}
+        onConfirm={(name, columnIds, isUnique) => {
+          addIndex(id, name, columnIds, isUnique);
+          setShowIndexDialog(false);
+        }}
+        onCancel={() => setShowIndexDialog(false)}
+      />
     </div>
   );
 });

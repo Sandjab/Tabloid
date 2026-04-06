@@ -116,53 +116,6 @@ function buildSameSidePath(
   return [path, sx + dir * LABEL_OFFSET, sy, tx + dir * LABEL_OFFSET, ty];
 }
 
-/**
- * Build a self-referencing loop path (same table, different columns).
- */
-function buildSelfRefPath(
-  sx: number, sy: number,
-  tx: number, ty: number,
-  sourceSide: HandleSide,
-  targetSide: HandleSide,
-  spreadOffset: number,
-): PathResult {
-  const margin = SAME_SIDE_MARGIN + spreadOffset;
-
-  if (sourceSide === targetSide) {
-    // Both on same side: U-loop outward
-    return buildSameSidePath(sx, sy, tx, ty, sourceSide, spreadOffset);
-  }
-
-  // Different sides (right→left or left→right): loop around the table
-  const srcDir = sourceSide === 'right' ? 1 : -1;
-  const tgtDir = targetSide === 'left' ? -1 : 1;
-  const dy = ty - sy;
-  // Go outward and loop above or below depending on relative Y
-  const loopDir = dy >= 0 ? -1 : 1; // if target is below, loop above, vice versa
-  const loopY = (loopDir > 0 ? Math.max(sy, ty) : Math.min(sy, ty)) + loopDir * margin;
-
-  const outSx = sx + srcDir * margin;
-  const outTx = tx + tgtDir * margin;
-  const r = Math.min(BORDER_RADIUS, Math.abs(loopY - sy) / 2, Math.abs(loopY - ty) / 2);
-  const ySrc = loopY > sy ? 1 : -1;
-  const yTgt = ty > loopY ? 1 : -1;
-
-  const path = [
-    `M ${sx},${sy}`,
-    `L ${outSx - srcDir * r},${sy}`,
-    `Q ${outSx},${sy} ${outSx},${sy + ySrc * r}`,
-    `L ${outSx},${loopY - ySrc * r}`,
-    `Q ${outSx},${loopY} ${outSx + (outTx > outSx ? 1 : -1) * r},${loopY}`,
-    `L ${outTx - (outTx > outSx ? 1 : -1) * r},${loopY}`,
-    `Q ${outTx},${loopY} ${outTx},${loopY + yTgt * r}`,
-    `L ${outTx},${ty - yTgt * r}`,
-    `Q ${outTx},${ty} ${outTx - tgtDir * r},${ty}`,
-    `L ${tx},${ty}`,
-  ].join(' ');
-
-  return [path, sx + srcDir * LABEL_OFFSET, sy, tx - tgtDir * LABEL_OFFSET, ty];
-}
-
 const LABEL_TYPE_MAP: Record<string, RelationType> = {
   '1-1': 'one-to-one',
   '1-N': 'one-to-many',
@@ -352,7 +305,13 @@ const RelationEdge = memo(function RelationEdge({
     toast(`Junction table "${junctionName}" created`, {
       action: {
         label: 'Undo',
-        onClick: () => useSchemaStore.temporal.getState().undo(),
+        onClick: () => {
+              const temporal = useSchemaStore.temporal.getState();
+              temporal.undo();
+              temporal.pause();
+              try { useSchemaStore.getState().rebuildNodesFromTables(); }
+              finally { temporal.resume(); }
+            },
       },
       duration: 4000,
     });

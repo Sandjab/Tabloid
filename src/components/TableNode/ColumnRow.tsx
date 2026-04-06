@@ -14,6 +14,7 @@ interface ColumnRowProps {
   isDragging: boolean;
   isDragOver: boolean;
   dragBelow: boolean;
+  isIndexHighlighted?: boolean;
   onDragStart: () => void;
   onDragEnd: () => void;
   onDragOverIndex: (index: number) => void;
@@ -26,6 +27,7 @@ const ColumnRow = memo(function ColumnRow({
   isDragging,
   isDragOver,
   dragBelow,
+  isIndexHighlighted,
   onDragStart,
   onDragEnd,
   onDragOverIndex,
@@ -62,11 +64,13 @@ const ColumnRow = memo(function ColumnRow({
       className={`nodrag flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors duration-150 ${
         isDragging ? 'opacity-30' : ''
       } ${isDragOver && !isDragging ? (dragBelow ? 'border-b-2 border-primary' : 'border-t-2 border-primary') : ''} ${
-        highlight === 'error'
-          ? 'bg-red-500/10'
-          : highlight === 'warning'
-            ? 'bg-orange-500/10'
-            : ''
+        isIndexHighlighted
+          ? 'bg-violet-500/10'
+          : highlight === 'error'
+            ? 'bg-red-500/10'
+            : highlight === 'warning'
+              ? 'bg-orange-500/10'
+              : ''
       }`}
       onDragOver={(e) => {
         e.preventDefault();

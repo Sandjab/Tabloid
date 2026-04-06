@@ -148,6 +148,21 @@ describe('convertToJunction', () => {
     expect(junctionTable.name).toBe(`${srcName}_${tgtName}`);
   });
 
+  it('creates a unique composite index on the junction table', () => {
+    vi.useFakeTimers();
+    const { id1, id2, col1, col2 } = createTwoTables();
+    const relId = useSchemaStore.getState().addRelation(id1, col1, id2, col2, 'many-to-many');
+
+    useSchemaStore.getState().convertToJunction(relId);
+    vi.advanceTimersByTime(200);
+    vi.useRealTimers();
+
+    const junctionTable = useSchemaStore.getState().tables[2];
+    expect(junctionTable.indexes).toHaveLength(1);
+    expect(junctionTable.indexes![0].isUnique).toBe(true);
+    expect(junctionTable.indexes![0].columnIds).toHaveLength(2);
+  });
+
   it('positions the junction table at the midpoint', () => {
     const { id1, id2, col1, col2 } = createTwoTables();
     const relId = useSchemaStore.getState().addRelation(id1, col1, id2, col2, 'many-to-many');

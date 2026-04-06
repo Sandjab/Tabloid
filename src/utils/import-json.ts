@@ -1,5 +1,5 @@
 import { COLUMN_TYPES } from '@/types/schema';
-import type { Table, Relation, Column, ColumnType, HandleSide } from '@/types/schema';
+import type { Table, Relation, Column, ColumnType, HandleSide, Index } from '@/types/schema';
 
 interface ImportResult {
   tables: Table[];
@@ -34,6 +34,24 @@ function validateColumn(col: unknown, index: number, tableId: string): Column {
   };
 }
 
+function validateIndex(idx: unknown, index: number, tableId: string): Index {
+  if (typeof idx !== 'object' || idx === null) {
+    throw new Error(`Invalid index at position ${index} in table ${tableId}`);
+  }
+  const i = idx as Record<string, unknown>;
+  if (typeof i.id !== 'string') throw new Error(`Index at position ${index} in table ${tableId} missing id`);
+  if (typeof i.name !== 'string') throw new Error(`Index at position ${index} in table ${tableId} missing name`);
+  if (!Array.isArray(i.columnIds) || i.columnIds.length === 0) {
+    throw new Error(`Index "${i.name}" in table ${tableId} missing columnIds`);
+  }
+  return {
+    id: i.id,
+    name: i.name,
+    columnIds: i.columnIds.filter((c): c is string => typeof c === 'string'),
+    isUnique: i.isUnique === true,
+  };
+}
+
 function validateTable(table: unknown, index: number): Table {
   if (typeof table !== 'object' || table === null) {
     throw new Error(`Invalid table at index ${index}`);
@@ -46,12 +64,16 @@ function validateTable(table: unknown, index: number): Table {
   const pos = typeof t.position === 'object' && t.position !== null
     ? (t.position as Record<string, unknown>)
     : undefined;
+  const indexes = Array.isArray(t.indexes)
+    ? t.indexes.map((idx: unknown, i: number) => validateIndex(idx, i, t.id as string))
+    : undefined;
   return {
     id: t.id,
     name: t.name,
     columns: t.columns.map((c: unknown, i: number) => validateColumn(c, i, t.id as string)),
     color: typeof t.color === 'string' ? t.color : undefined,
     notes: typeof t.notes === 'string' ? t.notes : undefined,
+    indexes,
     position: {
       x: typeof pos?.x === 'number' ? pos.x : 100 + index * 300,
       y: typeof pos?.y === 'number' ? pos.y : 100,

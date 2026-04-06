@@ -43,6 +43,32 @@ describe('JSON round-trip', () => {
   });
 });
 
+describe('JSON round-trip with indexes', () => {
+  it('preserves indexes on tables', () => {
+    const tablesWithIndexes: Table[] = [{
+      ...TABLES[0],
+      indexes: [{
+        id: 'idx_1',
+        name: 'idx_email',
+        columnIds: ['c2'],
+        isUnique: true,
+      }],
+    }];
+    const json = exportJSON(tablesWithIndexes, [], 'test');
+    const result = importJSON(json);
+    expect(result.tables[0].indexes).toHaveLength(1);
+    expect(result.tables[0].indexes![0].name).toBe('idx_email');
+    expect(result.tables[0].indexes![0].isUnique).toBe(true);
+    expect(result.tables[0].indexes![0].columnIds).toEqual(['c2']);
+  });
+
+  it('handles tables without indexes', () => {
+    const json = exportJSON(TABLES, [], 'test');
+    const result = importJSON(json);
+    expect(result.tables[0].indexes).toBeUndefined();
+  });
+});
+
 describe('JSON round-trip with sides', () => {
   it('preserves sourceSide and targetSide', () => {
     const relations: Relation[] = [{
