@@ -149,7 +149,7 @@ export default function Toolbar({ onSearchOpen, onExportOpen }: ToolbarProps) {
 
   return (
     <div
-      className="absolute left-4 top-4 z-10 flex items-center gap-1 rounded-lg bg-popover p-1 shadow-sm ring-1 ring-border"
+      className="absolute left-1/2 top-4 z-10 flex -translate-x-1/2 items-center gap-1 rounded-lg bg-popover p-1 shadow-sm ring-1 ring-border"
       data-testid="toolbar"
     >
       {/* Schema name dropdown */}
@@ -201,7 +201,7 @@ export default function Toolbar({ onSearchOpen, onExportOpen }: ToolbarProps) {
             );
           }}
         />
-        <DropdownMenuContent data-testid="schema-dropdown">
+        <DropdownMenuContent className="min-w-[220px]" data-testid="schema-dropdown">
           <DropdownMenuItem
             data-testid="new-schema-btn"
             onClick={handleNewSchema}

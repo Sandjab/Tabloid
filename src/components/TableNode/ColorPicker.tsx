@@ -13,11 +13,11 @@ interface ColorPickerProps {
 
 const ColorPicker = memo(function ColorPicker({ currentColor, onSelect }: ColorPickerProps) {
   return (
-    <div className="flex flex-wrap gap-1" data-testid="color-picker">
+    <div className="flex flex-wrap gap-1.5" data-testid="color-picker">
       {PALETTE.map((color) => (
         <button
           key={color}
-          className="h-5 w-5 rounded-full border-2 transition-transform hover:scale-110"
+          className="h-6 w-6 rounded-full border-2 transition-transform hover:scale-110"
           style={{
             backgroundColor: color,
             borderColor: color === currentColor ? 'white' : 'transparent',

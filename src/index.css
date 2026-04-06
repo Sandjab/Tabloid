@@ -125,6 +125,8 @@
   --border: oklch(0.91 0.008 250);
   --input: oklch(0.91 0.008 250);
   --ring: oklch(0.65 0.02 250);
+  --edge-color: #8b9bb5;
+  --edge-color-selected: #4f6fa0;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -160,6 +162,8 @@
   --border: oklch(1 0.01 250 / 10%);
   --input: oklch(1 0.01 250 / 15%);
   --ring: oklch(0.50 0.02 250);
+  --edge-color: #94a3b8;
+  --edge-color-selected: #93b4e0;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);

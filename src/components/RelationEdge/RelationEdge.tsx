@@ -5,7 +5,7 @@ import {
   getSmoothStepPath,
 } from '@xyflow/react';
 import type { EdgeProps, Edge } from '@xyflow/react';
-import { ENDPOINT_LABELS, EDGE_COLOR, EDGE_COLOR_SELECTED } from '@/types/schema';
+import { ENDPOINT_LABELS } from '@/types/schema';
 import type { RelationType, HandleSide } from '@/types/schema';
 import { useSchemaStore } from '@/store/useSchemaStore';
 import { toast } from 'sonner';
@@ -189,7 +189,7 @@ const RelationEdge = memo(function RelationEdge({
   const relationType = data?.relationType ?? 'one-to-many';
   const { source: sourceLabel, target: targetLabel } = ENDPOINT_LABELS[relationType];
 
-  const edgeColor = selected ? EDGE_COLOR_SELECTED : EDGE_COLOR;
+  const edgeColor = selected ? 'var(--edge-color-selected)' : 'var(--edge-color)';
   const strokeWidth = selected ? 2.5 : 1.5;
 
   const dx = tx - sx;
@@ -328,7 +328,7 @@ const RelationEdge = memo(function RelationEdge({
         <path
           d={edgePath}
           fill="none"
-          stroke={EDGE_COLOR_SELECTED}
+          style={{ stroke: 'var(--edge-color-selected)' }}
           strokeWidth={10}
           strokeOpacity={0.15}
           strokeLinecap="round"

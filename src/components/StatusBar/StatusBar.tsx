@@ -34,8 +34,11 @@ export default function StatusBar() {
     [tables, relations],
   );
 
-  const errorCount = warnings.filter((w) => w.severity === 'error').length;
-  const warnCount = warnings.filter((w) => w.severity === 'warning').length;
+  const errors = warnings.filter((w) => w.severity === 'error');
+  const warns = warnings.filter((w) => w.severity === 'warning');
+  const errorCount = errors.length;
+  const warnCount = warns.length;
+  const topWarning = errors[0] ?? warns[0];
 
   const handleZoomReset = useCallback(() => {
     zoomTo(1, { duration: 300 });
@@ -112,6 +115,16 @@ export default function StatusBar() {
                   {warnCount} warning{warnCount !== 1 ? 's' : ''}
                 </span>
               )}
+            </button>
+          )}
+          {topWarning && (
+            <button
+              className="max-w-[280px] truncate text-foreground/60 transition-colors hover:text-foreground"
+              onClick={() => handleWarningClick(topWarning)}
+              title={topWarning.message}
+              data-testid="top-warning-inline"
+            >
+              {topWarning.message}
             </button>
           )}
         </div>
