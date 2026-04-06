@@ -144,7 +144,7 @@ const RelationEdge = memo(function RelationEdge({
       {showLabels && (
         <EdgeLabelRenderer>
           <div
-            className="nodrag nopan pointer-events-none absolute text-[9px] font-semibold"
+            className="nodrag nopan pointer-events-none absolute text-[10px] font-bold leading-none"
             style={{
               transform: `translate(-50%, -100%) translate(${srcLabelX}px,${srcLabelY - 4}px)`,
               color: edgeColor,
@@ -154,7 +154,7 @@ const RelationEdge = memo(function RelationEdge({
             {sourceLabel}
           </div>
           <div
-            className="nodrag nopan pointer-events-none absolute text-[9px] font-semibold"
+            className="nodrag nopan pointer-events-none absolute text-[10px] font-bold leading-none"
             style={{
               transform: `translate(-50%, -100%) translate(${tgtLabelX}px,${tgtLabelY - 4}px)`,
               color: edgeColor,
