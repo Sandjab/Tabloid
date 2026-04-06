@@ -83,7 +83,7 @@ const RelationEdge = memo(function RelationEdge({
     ? 0.5
     : 0.3 + (bundleIndex / (bundleCount - 1)) * 0.4;
 
-  // Handles sit 1px inside the node border — extend edges to reach the border
+  // Handle centers sit ~1px inside the node border — nudge edges to the border
   const sx = sourceX + 1;
   const tx = targetX - 1;
 
