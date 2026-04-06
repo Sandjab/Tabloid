@@ -83,8 +83,9 @@ const RelationEdge = memo(function RelationEdge({
     ? 0.5
     : 0.3 + (bundleIndex / (bundleCount - 1)) * 0.4;
 
-  const sx = sourceX;
-  const tx = targetX + 3;
+  // Handles sit 1px inside the node border — extend edges to reach the border
+  const sx = sourceX + 1;
+  const tx = targetX - 1;
 
   const turnX = sx + (tx - sx) * stepPosition + spreadOffset;
 

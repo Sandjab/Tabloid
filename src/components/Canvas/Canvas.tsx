@@ -234,6 +234,7 @@ export default function Canvas({ onSearchOpen }: CanvasProps) {
         multiSelectionKeyCode="Shift"
         deleteKeyCode="Delete"
         minZoom={minZoom}
+        maxZoom={4}
         zoomOnDoubleClick={false}
         fitView
         data-testid="react-flow-canvas"
