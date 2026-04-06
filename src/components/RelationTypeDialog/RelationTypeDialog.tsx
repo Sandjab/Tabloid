@@ -17,7 +17,7 @@ interface RelationTypeDialogProps {
 }
 
 const RELATION_OPTIONS = (
-  Object.entries(RELATION_TYPE_LABELS) as [RelationType, { short: string; long: string }][]
+  Object.entries(RELATION_TYPE_LABELS) as [RelationType, { long: string }][]
 ).map(([value, labels]) => ({ value, label: labels.long }));
 
 export default function RelationTypeDialog({

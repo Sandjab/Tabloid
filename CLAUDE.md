@@ -11,8 +11,23 @@ Il tourne 100% côté client (React + TypeScript), déployé en static sur GitHu
 - React Flow (`@xyflow/react`) pour le canvas
 - Zustand pour le state
 - Tailwind CSS pour le styling
+- shadcn/ui pour les composants UI (style `base-nova`, base color `neutral`, CSS variables)
+- Lucide React pour les icônes
 - Vitest pour les tests unitaires
 - Playwright pour les tests E2E
+
+### shadcn/ui
+
+- Les composants UI sont dans `src/components/ui/` — **ne pas les modifier manuellement**
+- Pour ajouter un composant : `npx shadcn@latest add <component>`
+- Configuration dans `components.json`
+- Utilise des CSS variables pour le theming (clair/sombre)
+
+### Impeccable (plugin Claude Code)
+
+- Utiliser les skills `impeccable:*` pour le design et la critique UI/UX
+- Compatible Tailwind CSS — les skills génèrent du code Tailwind natif
+- Skills utiles : `/critique`, `/polish`, `/distill`, `/animate`, `/adapt`
 
 ## Commandes
 

@@ -5,11 +5,12 @@ import {
   getSmoothStepPath,
 } from '@xyflow/react';
 import type { EdgeProps, Edge } from '@xyflow/react';
-import { RELATION_TYPE_LABELS, EDGE_COLOR, EDGE_COLOR_SELECTED } from '@/types/schema';
+import { ENDPOINT_LABELS, EDGE_COLOR, EDGE_COLOR_SELECTED } from '@/types/schema';
 import type { RelationType } from '@/types/schema';
 
 const EDGE_SPREAD = 16;
 const BORDER_RADIUS = 8;
+const LABEL_OFFSET = 18;
 
 interface RelationEdgeData {
   relationType: RelationType;
@@ -24,18 +25,22 @@ type RelationEdgeType = Edge<RelationEdgeData, 'relation'>;
 
 /**
  * Build a clean 3-segment step path: horizontal → vertical → horizontal.
- * Returns [svgPath, labelX, labelY].
+ * Returns [svgPath, srcLabelX, srcLabelY, tgtLabelX, tgtLabelY].
  */
 function buildStepPath(
   sx: number, sy: number,
   tx: number, ty: number,
   turnX: number,
-): [string, number, number] {
+): [string, number, number, number, number] {
   const dy = ty - sy;
 
   // Degenerate: same Y → straight horizontal line
   if (Math.abs(dy) < 1) {
-    return [`M ${sx},${sy} L ${tx},${ty}`, (sx + tx) / 2, sy];
+    return [
+      `M ${sx},${sy} L ${tx},${ty}`,
+      sx + LABEL_OFFSET, sy,
+      tx - LABEL_OFFSET, ty,
+    ];
   }
 
   const r = Math.min(BORDER_RADIUS, Math.abs(dy) / 2, Math.abs(turnX - sx), Math.abs(tx - turnX));
@@ -52,7 +57,7 @@ function buildStepPath(
     `L ${tx},${ty}`,
   ].join(' ');
 
-  return [path, turnX, (sy + ty) / 2];
+  return [path, sx + LABEL_OFFSET, sy, tx - LABEL_OFFSET, ty];
 }
 
 const RelationEdge = memo(function RelationEdge({
@@ -85,31 +90,30 @@ const RelationEdge = memo(function RelationEdge({
 
   // Use custom 3-segment path for normal left-to-right edges,
   // fall back to getSmoothStepPath for reversed/unusual layouts.
-  let edgePath: string, labelX: number, labelY: number;
+  let edgePath: string;
+  let srcLabelX: number, srcLabelY: number, tgtLabelX: number, tgtLabelY: number;
   const isNormalLayout = (tx - sx) > 40;
 
   if (isNormalLayout) {
-    [edgePath, labelX, labelY] = buildStepPath(sx, sourceY, tx, targetY, turnX);
+    [edgePath, srcLabelX, srcLabelY, tgtLabelX, tgtLabelY] = buildStepPath(sx, sourceY, tx, targetY, turnX);
   } else {
-    [edgePath, labelX, labelY] = getSmoothStepPath({
+    [edgePath] = getSmoothStepPath({
       sourceX: sx, sourceY, targetX: tx, targetY,
       sourcePosition, targetPosition,
       borderRadius: BORDER_RADIUS,
     });
+    srcLabelX = sx + LABEL_OFFSET;
+    srcLabelY = sourceY;
+    tgtLabelX = tx - LABEL_OFFSET;
+    tgtLabelY = targetY;
   }
 
   const relationType = data?.relationType ?? 'one-to-many';
-  const label = RELATION_TYPE_LABELS[relationType].short;
-
-  const sourceMarker = relationType === 'many-to-one' || relationType === 'many-to-many'
-    ? 'url(#crowfoot-many)'
-    : 'url(#crowfoot-one)';
-  const targetMarker = relationType === 'one-to-many' || relationType === 'many-to-many'
-    ? 'url(#crowfoot-many)'
-    : 'url(#crowfoot-one)';
+  const { source: sourceLabel, target: targetLabel } = ENDPOINT_LABELS[relationType];
 
   const edgeColor = selected ? EDGE_COLOR_SELECTED : EDGE_COLOR;
   const strokeWidth = selected ? 2.5 : 1.5;
+  const showLabels = Math.abs(tx - sx) >= 50;
 
   return (
     <>
@@ -136,20 +140,31 @@ const RelationEdge = memo(function RelationEdge({
         id={id}
         path={edgePath}
         style={{ stroke: edgeColor, strokeWidth }}
-        markerStart={sourceMarker}
-        markerEnd={targetMarker}
       />
-      <EdgeLabelRenderer>
-        <div
-          className="nodrag nopan pointer-events-auto absolute rounded-sm bg-popover px-1 py-0.5 text-[8px] font-medium text-muted-foreground ring-1 ring-border dark:ring-0"
-          style={{
-            transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
-          }}
-          data-testid={`edge-label-${id}`}
-        >
-          {label}
-        </div>
-      </EdgeLabelRenderer>
+      {showLabels && (
+        <EdgeLabelRenderer>
+          <div
+            className="nodrag nopan pointer-events-none absolute text-[9px] font-semibold"
+            style={{
+              transform: `translate(-50%, -100%) translate(${srcLabelX}px,${srcLabelY - 4}px)`,
+              color: edgeColor,
+            }}
+            data-testid={`edge-label-source-${id}`}
+          >
+            {sourceLabel}
+          </div>
+          <div
+            className="nodrag nopan pointer-events-none absolute text-[9px] font-semibold"
+            style={{
+              transform: `translate(-50%, -100%) translate(${tgtLabelX}px,${tgtLabelY - 4}px)`,
+              color: edgeColor,
+            }}
+            data-testid={`edge-label-target-${id}`}
+          >
+            {targetLabel}
+          </div>
+        </EdgeLabelRenderer>
+      )}
     </>
   );
 });

@@ -26,7 +26,6 @@ import { isMac } from '@/utils/platform';
 import { Plus, Maximize, LayoutGrid, MousePointerClick } from 'lucide-react';
 import TableNode from '@/components/TableNode/TableNode';
 import RelationEdge from '@/components/RelationEdge/RelationEdge';
-import CrowFootMarkers from '@/components/RelationEdge/CrowFootMarkers';
 import RelationTypeDialog from '@/components/RelationTypeDialog/RelationTypeDialog';
 import StatusBar from '@/components/StatusBar/StatusBar';
 import type { RelationType, TableNodeData } from '@/types/schema';
@@ -219,7 +218,6 @@ export default function Canvas({ onSearchOpen }: CanvasProps) {
           contextMenuPos.current = { x: e.clientX, y: e.clientY };
         }}
       >
-      <CrowFootMarkers />
       <ReactFlow
         nodes={nodes}
         edges={edges}

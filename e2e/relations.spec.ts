@@ -69,8 +69,9 @@ test.describe('Relations', () => {
     await expect(page.getByTestId('relation-type-dialog')).not.toBeVisible();
 
     const edgeLabels = page.locator('[data-testid^="edge-label-"]');
-    await expect(edgeLabels).toHaveCount(1);
-    await expect(edgeLabels.first()).toHaveText('1:N');
+    await expect(edgeLabels).toHaveCount(2);
+    await expect(page.locator('[data-testid^="edge-label-source-"]').first()).toHaveText('1');
+    await expect(page.locator('[data-testid^="edge-label-target-"]').first()).toHaveText('N');
   });
 
   test('canceling dialog does not create a relation', async ({ page }) => {

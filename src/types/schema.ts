@@ -78,11 +78,18 @@ export type RelationType =
   | 'many-to-one'
   | 'many-to-many';
 
-export const RELATION_TYPE_LABELS: Record<RelationType, { short: string; long: string }> = {
-  'one-to-one': { short: '1:1', long: '1:1 — One to One' },
-  'one-to-many': { short: '1:N', long: '1:N — One to Many' },
-  'many-to-one': { short: 'N:1', long: 'N:1 — Many to One' },
-  'many-to-many': { short: 'N:N', long: 'N:N — Many to Many' },
+export const RELATION_TYPE_LABELS: Record<RelationType, { long: string }> = {
+  'one-to-one': { long: '1:1 — One to One' },
+  'one-to-many': { long: '1:N — One to Many' },
+  'many-to-one': { long: 'N:1 — Many to One' },
+  'many-to-many': { long: 'N:N — Many to Many' },
+};
+
+export const ENDPOINT_LABELS: Record<RelationType, { source: string; target: string }> = {
+  'one-to-one':   { source: '1', target: '1' },
+  'one-to-many':  { source: '1', target: 'N' },
+  'many-to-one':  { source: 'N', target: '1' },
+  'many-to-many': { source: 'N', target: 'N' },
 };
 
 export const EDGE_COLOR = '#8b9bb5';

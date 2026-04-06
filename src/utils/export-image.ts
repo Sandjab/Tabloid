@@ -46,11 +46,8 @@ const PRINT_CSS = `
   padding: 0 !important;
   color: #6b7280 !important;
 }
-/* Edge labels: white bg, clean border */
+/* Edge endpoint labels */
 .${PRINT_CLASS} .nodrag.nopan {
-  background: #ffffff !important;
-  --tw-ring-color: transparent !important;
-  border: 1px solid #d1d5db !important;
   color: #6b7280 !important;
 }
 /* NN/UQ active badges: keep their colors */
@@ -73,10 +70,8 @@ function getReactFlowWrapper(): HTMLElement {
   return el;
 }
 
-const MARKER_DEFS_ID = 'tabloid-print-markers';
-
-// Saved marker attributes to restore after capture
-let savedMarkers: { el: Element; attr: string; value: string }[] = [];
+// Saved bridge stroke attributes to restore after capture
+let savedBridgeStrokes: { el: Element; attr: string; value: string }[] = [];
 
 function injectPrintMode(): void {
   const style = document.createElement('style');
@@ -85,24 +80,15 @@ function injectPrintMode(): void {
   document.head.appendChild(style);
   getReactFlowWrapper().classList.add(PRINT_CLASS);
 
-  // CrowFootMarkers <defs> live outside .react-flow__viewport, so
-  // html-to-image won't capture them. Clone them into the edges SVG.
-  const edgesSvg = document.querySelector('.react-flow__viewport svg:has(.react-flow__edge)');
-  const markerDefs = document.querySelector('svg.absolute > defs')?.cloneNode(true) as Element | null;
-  if (edgesSvg && markerDefs) {
-    (markerDefs as Element).id = MARKER_DEFS_ID;
-    edgesSvg.prepend(markerDefs);
-  }
-
   // Change bridge path stroke from white/dark to edge color so
   // the wider bridge extends the visible line to the table borders.
   // (In the live viewport, the bridge creates a "crossing" effect;
   //  in print on white bg, we repurpose it as line extension.)
-  savedMarkers = [];
+  savedBridgeStrokes = [];
   document.querySelectorAll('.react-flow__edge path').forEach((path) => {
     const stroke = path.getAttribute('stroke');
     if (stroke === 'white') {
-      savedMarkers.push({ el: path, attr: 'stroke', value: stroke });
+      savedBridgeStrokes.push({ el: path, attr: 'stroke', value: stroke });
       path.setAttribute('stroke', EDGE_COLOR);
     }
   });
@@ -110,14 +96,12 @@ function injectPrintMode(): void {
 
 function removePrintMode(): void {
   document.getElementById(PRINT_STYLE_ID)?.remove();
-  document.getElementById(MARKER_DEFS_ID)?.remove();
   document.querySelector(`.${PRINT_CLASS}`)?.classList.remove(PRINT_CLASS);
 
-  // Restore marker attributes
-  for (const { el, attr, value } of savedMarkers) {
+  for (const { el, attr, value } of savedBridgeStrokes) {
     el.setAttribute(attr, value);
   }
-  savedMarkers = [];
+  savedBridgeStrokes = [];
 }
 
 function filterChrome(node: HTMLElement): boolean {
