@@ -5,6 +5,7 @@ import { useInlineEdit } from '@/hooks/useInlineEdit';
 import { COLUMN_TYPES } from '@/types/schema';
 import type { Column, ColumnType } from '@/types/schema';
 import { GripVertical, KeyRound } from 'lucide-react';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { useColumnHighlight } from '@/hooks/useHighlight';
 
 interface ColumnRowProps {
@@ -117,20 +118,42 @@ const ColumnRow = memo(function ColumnRow({
           data-testid={`column-name-input-${column.id}`}
         />
       ) : (
-        <span
-          className={`min-w-[120px] flex-1 cursor-pointer truncate ${
-            highlight === 'error'
-              ? 'italic text-red-700 dark:text-red-400'
-              : highlight === 'warning'
-                ? 'italic text-orange-500'
-                : 'text-foreground'
-          }`}
-          onDoubleClick={startEditing}
-          title={column.name}
-          data-testid={`column-name-${column.id}`}
-        >
-          {column.name}
-        </span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span
+              className={`min-w-[120px] flex-1 cursor-pointer truncate ${
+                highlight === 'error'
+                  ? 'italic text-red-700 dark:text-red-400'
+                  : highlight === 'warning'
+                    ? 'italic text-orange-500'
+                    : 'text-foreground'
+              }`}
+              onDoubleClick={startEditing}
+              data-testid={`column-name-${column.id}`}
+            >
+              {column.name}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            <span className="font-medium">{column.name}</span>
+            {' · '}
+            <span>{column.type}</span>
+            {(column.isPrimaryKey || !column.isNullable || column.isUnique) && (
+              <>
+                {' · '}
+                <span>
+                  {[
+                    column.isPrimaryKey && 'PK',
+                    !column.isNullable && 'NOT NULL',
+                    column.isUnique && 'UNIQUE',
+                  ]
+                    .filter(Boolean)
+                    .join(', ')}
+                </span>
+              </>
+            )}
+          </TooltipContent>
+        </Tooltip>
       )}
 
       <select
