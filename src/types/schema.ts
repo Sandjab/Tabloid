@@ -45,6 +45,7 @@ export interface Column {
   isNullable: boolean;
   isUnique: boolean;
   defaultValue?: string;
+  description?: string;
   precision?: number;
   scale?: number;
 }

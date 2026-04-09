@@ -1,11 +1,12 @@
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useSchemaStore } from '@/store/useSchemaStore';
 import { useInlineEdit } from '@/hooks/useInlineEdit';
 import { COLUMN_TYPES } from '@/types/schema';
 import type { Column, ColumnType } from '@/types/schema';
-import { GripVertical, KeyRound } from 'lucide-react';
+import { GripVertical, KeyRound, MessageSquare } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { useColumnHighlight } from '@/hooks/useHighlight';
 
 interface ColumnRowProps {
@@ -36,6 +37,7 @@ const ColumnRow = memo(function ColumnRow({
   const {
     updateColumnName,
     updateColumnType,
+    updateColumnDescription,
     toggleColumnPrimaryKey,
     toggleColumnNullable,
     toggleColumnUnique,
@@ -44,12 +46,15 @@ const ColumnRow = memo(function ColumnRow({
     useShallow((s) => ({
       updateColumnName: s.updateColumnName,
       updateColumnType: s.updateColumnType,
+      updateColumnDescription: s.updateColumnDescription,
       toggleColumnPrimaryKey: s.toggleColumnPrimaryKey,
       toggleColumnNullable: s.toggleColumnNullable,
       toggleColumnUnique: s.toggleColumnUnique,
       removeColumn: s.removeColumn,
     })),
   );
+
+  const [descOpen, setDescOpen] = useState(false);
 
   const highlight = useColumnHighlight(tableId, column.id);
 
@@ -148,9 +153,44 @@ const ColumnRow = memo(function ColumnRow({
                 </>
               )}
             </span>
+            {column.description && (
+              <span className="text-background/60 italic">{column.description}</span>
+            )}
           </TooltipContent>
         </Tooltip>
       )}
+
+      <Popover open={descOpen} onOpenChange={setDescOpen}>
+        <PopoverTrigger
+          className={`shrink-0 transition-opacity ${
+            column.description
+              ? 'text-sky-500'
+              : 'text-muted-foreground/40 opacity-0 group-hover/row:opacity-100'
+          }`}
+          title="Column description"
+          data-testid={`column-desc-${column.id}`}
+        >
+          <MessageSquare className="size-3" />
+        </PopoverTrigger>
+        <PopoverContent side="top" className="w-64 p-2">
+          <textarea
+            className="nowheel nopan w-full resize-none rounded border border-input bg-transparent px-2 py-1 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
+            rows={3}
+            placeholder="Column description..."
+            defaultValue={column.description ?? ''}
+            autoFocus
+            onBlur={(e) => {
+              const val = e.target.value.trim();
+              updateColumnDescription(tableId, column.id, val || undefined);
+              setDescOpen(false);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') setDescOpen(false);
+            }}
+            data-testid={`column-desc-input-${column.id}`}
+          />
+        </PopoverContent>
+      </Popover>
 
       <select
         className="nowheel w-[90px] shrink-0 rounded border border-input bg-transparent px-0.5 text-xs text-muted-foreground"

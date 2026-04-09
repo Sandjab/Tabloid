@@ -51,6 +51,18 @@ export function exportSQL(
     }
   }
 
+  // Column comments
+  for (const table of tables) {
+    for (const col of table.columns) {
+      if (col.description) {
+        const escaped = col.description.replace(/'/g, "''");
+        statements.push(
+          `COMMENT ON COLUMN ${dialect.formatTableName(table.name)}.${dialect.formatColumnName(col.name)} IS '${escaped}';`,
+        );
+      }
+    }
+  }
+
   // Index statements
   for (const table of tables) {
     for (const idx of table.indexes ?? []) {

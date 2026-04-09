@@ -48,6 +48,7 @@ export interface SchemaState {
   toggleColumnNullable: (tableId: string, columnId: string) => void;
   toggleColumnUnique: (tableId: string, columnId: string) => void;
   updateColumnDefault: (tableId: string, columnId: string, value: string | undefined) => void;
+  updateColumnDescription: (tableId: string, columnId: string, description: string | undefined) => void;
 
   addRelation: (
     sourceTableId: string,
@@ -440,6 +441,17 @@ export const useSchemaStore = create<SchemaState>()(
             updateColumnInTable(t, columnId, (c) => ({
               ...c,
               defaultValue: value,
+            })),
+          ),
+        );
+      },
+
+      updateColumnDescription: (tableId, columnId, description) => {
+        set((state) =>
+          updateTableInState(state.tables, state.nodes, tableId, (t) =>
+            updateColumnInTable(t, columnId, (c) => ({
+              ...c,
+              description,
             })),
           ),
         );
