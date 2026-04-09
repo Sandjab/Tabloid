@@ -109,6 +109,7 @@ const ColumnRow = memo(function ColumnRow({
         <input
           className="nowheel min-w-[120px] flex-1 rounded border border-input px-1 text-sm"
           defaultValue={column.name}
+          maxLength={64}
           autoFocus
           onBlur={(e) => handleSubmit(e.target.value)}
           onKeyDown={(e) => {
@@ -119,45 +120,40 @@ const ColumnRow = memo(function ColumnRow({
         />
       ) : (
         <Tooltip>
-          <TooltipTrigger>
-            <span
-              className={`min-w-[120px] flex-1 cursor-pointer truncate ${
-                highlight === 'error'
-                  ? 'italic text-red-700 dark:text-red-400'
-                  : highlight === 'warning'
-                    ? 'italic text-orange-500'
-                    : 'text-foreground'
-              }`}
-              onDoubleClick={startEditing}
-              data-testid={`column-name-${column.id}`}
-            >
-              {column.name}
-            </span>
+          <TooltipTrigger
+            className={`min-w-[120px] max-w-[180px] flex-1 truncate text-left cursor-pointer ${
+              highlight === 'error'
+                ? 'italic text-red-700 dark:text-red-400'
+                : highlight === 'warning'
+                  ? 'italic text-orange-500'
+                  : 'text-foreground'
+            }`}
+            render={<span />}
+            onDoubleClick={startEditing}
+            data-testid={`column-name-${column.id}`}
+          >
+            {column.name}
           </TooltipTrigger>
-          <TooltipContent side="top">
-            <span className="font-medium">{column.name}</span>
-            {' · '}
-            <span>{column.type}</span>
-            {(column.isPrimaryKey || !column.isNullable || column.isUnique) && (
-              <>
-                {' · '}
-                <span>
-                  {[
-                    column.isPrimaryKey && 'PK',
-                    !column.isNullable && 'NOT NULL',
-                    column.isUnique && 'UNIQUE',
-                  ]
-                    .filter(Boolean)
-                    .join(', ')}
-                </span>
-              </>
-            )}
+          <TooltipContent side="top" className="flex flex-col gap-1 max-w-none">
+            <span className="font-medium whitespace-nowrap">{column.name}</span>
+            <span className="flex items-center gap-1.5">
+              <span className="text-background/70">{column.type}{column.type === 'DECIMAL' && column.precision != null && `(${column.precision}${column.scale != null ? `,${column.scale}` : ''})`}</span>
+              {column.isPrimaryKey && <span className="rounded bg-amber-500/20 px-1 text-amber-300">PK</span>}
+              {!column.isNullable && <span className="rounded bg-rose-500/20 px-1 text-rose-300">NN</span>}
+              {column.isUnique && <span className="rounded bg-violet-500/20 px-1 text-violet-300">UQ</span>}
+              {column.defaultValue && (
+                <>
+                  <span className="text-background/40">·</span>
+                  <span className="text-background/70">= {column.defaultValue}</span>
+                </>
+              )}
+            </span>
           </TooltipContent>
         </Tooltip>
       )}
 
       <select
-        className="nowheel rounded border border-input bg-transparent px-0.5 text-xs text-muted-foreground"
+        className="nowheel w-[90px] shrink-0 rounded border border-input bg-transparent px-0.5 text-xs text-muted-foreground"
         value={column.type}
         onChange={(e) =>
           updateColumnType(tableId, column.id, e.target.value as ColumnType)
