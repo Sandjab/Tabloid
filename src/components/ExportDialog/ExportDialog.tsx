@@ -3,7 +3,6 @@ import { useSchemaStore } from '@/store/useSchemaStore';
 import { validateSchema } from '@/utils/validate-schema';
 import { DIALECTS, DIALECT_NAMES } from '@/dialects';
 import { exportSQL } from '@/utils/export-sql';
-import { exportJSON } from '@/utils/export-json';
 import { exportYAML } from '@/utils/export-yaml';
 import { exportMermaid } from '@/utils/export-mermaid';
 import { exportDBML } from '@/utils/export-dbml';
@@ -26,11 +25,10 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 
-type ExportFormat = 'sql' | 'json' | 'yaml' | 'mermaid' | 'dbml' | 'excalidraw' | 'png' | 'svg';
+type ExportFormat = 'sql' | 'yaml' | 'mermaid' | 'dbml' | 'excalidraw' | 'png' | 'svg';
 
 const FORMATS: { value: ExportFormat; label: string }[] = [
   { value: 'sql', label: 'SQL' },
-  { value: 'json', label: 'JSON (.tabloid.json)' },
   { value: 'yaml', label: 'YAML' },
   { value: 'mermaid', label: 'Mermaid' },
   { value: 'dbml', label: 'DBML' },
@@ -54,14 +52,12 @@ export default function ExportDialog({ open, onOpenChange }: ExportDialogProps) 
 
   const validationIssues = useMemo(() => validateSchema(tables, relations), [tables, relations]);
   const hasIssues = validationIssues.length > 0;
-  const exportBlocked = hasIssues && format !== 'json';
+  const exportBlocked = hasIssues;
 
   const preview = useMemo(() => {
     switch (format) {
       case 'sql':
         return exportSQL(tables, relations, DIALECTS[dialect]);
-      case 'json':
-        return exportJSON(tables, relations, schemaName);
       case 'yaml':
         return exportYAML(tables, relations, schemaName);
       case 'mermaid':
@@ -84,9 +80,6 @@ export default function ExportDialog({ open, onOpenChange }: ExportDialogProps) 
     switch (format) {
       case 'sql':
         downloadText(preview, `${schemaName}.sql`);
-        break;
-      case 'json':
-        downloadText(preview, `${schemaName}.tabloid.json`, 'application/json');
         break;
       case 'yaml':
         downloadText(preview, `${schemaName}.yaml`, 'text/yaml');

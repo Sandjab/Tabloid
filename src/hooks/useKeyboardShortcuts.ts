@@ -2,7 +2,13 @@ import { useEffect, useCallback } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { useUndoRedo } from './useUndoRedo';
 import { useSchemaStore } from '@/store/useSchemaStore';
+import { exportJSON } from '@/utils/export-json';
+import { importJSON } from '@/utils/import-json';
+import { downloadText } from '@/utils/download';
+import { dedupName } from '@/utils/naming';
+import { saveCurrentSchema, getRecentList } from '@/hooks/useAutoSave';
 import { isMac } from '@/utils/platform';
+import { toast } from 'sonner';
 
 interface KeyboardShortcutsOptions {
   onSearchOpen: () => void;
@@ -43,9 +49,41 @@ export function useKeyboardShortcuts({ onSearchOpen }: KeyboardShortcutsOptions)
             }
             break;
           }
-          case 's':
+          case 's': {
             e.preventDefault();
+            const { tables, relations, schemaName } = useSchemaStore.getState();
+            const json = exportJSON(tables, relations, schemaName);
+            downloadText(json, `${schemaName}.tabloid.json`, 'application/json');
+            toast(`Saved ${schemaName}.tabloid.json`);
             break;
+          }
+          case 'o': {
+            e.preventDefault();
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.tabloid.json';
+            input.onchange = () => {
+              const file = input.files?.[0];
+              if (!file) return;
+              const reader = new FileReader();
+              reader.onload = () => {
+                try {
+                  saveCurrentSchema();
+                  const { tables, relations, name } = importJSON(reader.result as string);
+                  const existingNames = getRecentList().map((entry) => entry.name);
+                  const safeName = dedupName(name, existingNames);
+                  useSchemaStore.getState().loadSchema(tables, relations, safeName);
+                  fitView({ padding: 0.2, duration: 300 });
+                  toast('Previous schema available in recents');
+                } catch (err) {
+                  toast.error(`Load failed: ${err instanceof Error ? err.message : 'Invalid file'}`);
+                }
+              };
+              reader.readAsText(file);
+            };
+            input.click();
+            break;
+          }
           case 'a':
             e.preventDefault();
             useSchemaStore.getState().onNodesChange(

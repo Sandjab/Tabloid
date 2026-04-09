@@ -8,8 +8,10 @@ import { computeAutoLayout } from '@/utils/auto-layout';
 import { exportJSON } from '@/utils/export-json';
 import { importJSON } from '@/utils/import-json';
 import { parseSQL } from '@/utils/import-sql';
+import { downloadText } from '@/utils/download';
 import { dedupName } from '@/utils/naming';
 import { saveCurrentSchema, loadSchemaByName, renameStoredSchema, getRecentList } from '@/hooks/useAutoSave';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -24,6 +26,8 @@ import {
   Undo2,
   Redo2,
   LayoutGrid,
+  Save,
+  FolderOpen,
   Download,
   Upload,
   Search,
@@ -49,6 +53,7 @@ export default function Toolbar({ onSearchOpen, onExportOpen }: ToolbarProps) {
   const { undo, redo, canUndo, canRedo } = useUndoRedo();
   const { theme, toggleTheme } = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const loadInputRef = useRef<HTMLInputElement>(null);
 
   const onNameSubmit = useCallback(
     (value: string) => {
@@ -117,6 +122,41 @@ export default function Toolbar({ onSearchOpen, onExportOpen }: ToolbarProps) {
     updateTablePositions(positions);
     fitView({ padding: 0.2, duration: 300 });
   }, [fitView]);
+
+  const handleSave = useCallback(() => {
+    const { tables, relations, schemaName: name } = useSchemaStore.getState();
+    const json = exportJSON(tables, relations, name);
+    downloadText(json, `${name}.tabloid.json`, 'application/json');
+    toast(`Saved ${name}.tabloid.json`);
+  }, []);
+
+  const handleLoad = useCallback(() => {
+    loadInputRef.current?.click();
+  }, []);
+
+  const handleLoadFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          saveCurrentSchema();
+          const { tables, relations, name } = importJSON(reader.result as string);
+          const existingNames = getRecentList().map((entry) => entry.name);
+          const safeName = dedupName(name, existingNames);
+          loadSchema(tables, relations, safeName);
+          fitView({ padding: 0.2, duration: 300 });
+          toast('Previous schema available in recents');
+        } catch (err) {
+          alert(`Load failed: ${err instanceof Error ? err.message : 'Invalid file'}`);
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    },
+    [loadSchema, fitView],
+  );
 
   const handleImport = useCallback(() => {
     fileInputRef.current?.click();
@@ -293,6 +333,37 @@ export default function Toolbar({ onSearchOpen, onExportOpen }: ToolbarProps) {
       <Button
         variant="ghost"
         size="sm"
+        onClick={handleSave}
+        title="Save (Ctrl+S)"
+        data-testid="save-btn"
+      >
+        <Save className="size-3.5" />
+        Save
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={handleLoad}
+        title="Load (Ctrl+O)"
+        data-testid="load-btn"
+      >
+        <FolderOpen className="size-3.5" />
+        Load
+      </Button>
+      <input
+        ref={loadInputRef}
+        type="file"
+        accept=".tabloid.json"
+        className="hidden"
+        onChange={handleLoadFileChange}
+        data-testid="load-file-input"
+      />
+
+      <Separator orientation="vertical" className="mx-0.5 h-6" />
+
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={onExportOpen}
         title="Export schema"
         data-testid="export-btn"
@@ -313,7 +384,7 @@ export default function Toolbar({ onSearchOpen, onExportOpen }: ToolbarProps) {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".json,.tabloid.json,.sql"
+        accept=".json,.sql"
         className="hidden"
         onChange={handleFileChange}
         data-testid="import-file-input"
