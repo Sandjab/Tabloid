@@ -138,9 +138,9 @@ const ColumnRow = memo(function ColumnRow({
             <span className="font-medium whitespace-nowrap">{column.name}</span>
             <span className="flex items-center gap-1.5">
               <span className="text-background/70">{column.type}{column.type === 'DECIMAL' && column.precision != null && `(${column.precision}${column.scale != null ? `,${column.scale}` : ''})`}</span>
-              {column.isPrimaryKey && <span className="rounded bg-amber-500/20 px-1 text-amber-300">PK</span>}
-              {!column.isNullable && <span className="rounded bg-rose-500/20 px-1 text-rose-300">NN</span>}
-              {column.isUnique && <span className="rounded bg-violet-500/20 px-1 text-violet-300">UQ</span>}
+              {column.isPrimaryKey && <span className="rounded bg-amber-500/20 px-1 text-amber-300 dark:text-amber-700">PK</span>}
+              {!column.isNullable && <span className="rounded bg-rose-500/20 px-1 text-rose-300 dark:text-rose-700">NN</span>}
+              {column.isUnique && <span className="rounded bg-violet-500/20 px-1 text-violet-300 dark:text-violet-700">UQ</span>}
               {column.defaultValue && (
                 <>
                   <span className="text-background/40">·</span>
