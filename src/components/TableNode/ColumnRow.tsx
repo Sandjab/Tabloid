@@ -119,7 +119,7 @@ const ColumnRow = memo(function ColumnRow({
         />
       ) : (
         <Tooltip>
-          <TooltipTrigger asChild>
+          <TooltipTrigger>
             <span
               className={`min-w-[120px] flex-1 cursor-pointer truncate ${
                 highlight === 'error'
