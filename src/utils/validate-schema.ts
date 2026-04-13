@@ -1,4 +1,10 @@
-import type { Table, Relation } from '@/types/schema';
+import type { Table, Relation, ColumnType } from '@/types/schema';
+
+function areTypesCompatible(a: ColumnType, b: ColumnType): boolean {
+  if (a === b) return true;
+  const normalize = (t: ColumnType): ColumnType => (t === 'SERIAL' ? 'INTEGER' : t);
+  return normalize(a) === normalize(b);
+}
 
 export interface ValidationWarning {
   type:
@@ -21,7 +27,7 @@ export function validateSchema(
   relations: Relation[],
 ): ValidationWarning[] {
   const warnings: ValidationWarning[] = [];
-  const columnMap = new Map<string, { tableId: string; type: string }>();
+  const columnMap = new Map<string, { tableId: string; type: ColumnType }>();
 
   // Duplicate table names
   const tableNames = new Map<string, string>();
@@ -106,7 +112,7 @@ export function validateSchema(
       continue;
     }
 
-    if (src.type !== tgt.type) {
+    if (!areTypesCompatible(src.type, tgt.type)) {
       const srcTable = tables.find((t) => t.id === rel.sourceTableId);
       const tgtTable = tables.find((t) => t.id === rel.targetTableId);
       warnings.push({

@@ -87,6 +87,25 @@ describe('validateSchema', () => {
     expect(warnings.some((w) => w.type === 'fk-incompatible-types')).toBe(true);
   });
 
+  it('does not warn on FK between SERIAL and INTEGER', () => {
+    const tables = [
+      makeTable('t1'),
+      makeTable('t2', {
+        columns: [{ id: 't2-c1', name: 'ref', type: 'INTEGER', isPrimaryKey: false, isNullable: true, isUnique: false }],
+      }),
+    ];
+    const relations: Relation[] = [{
+      id: 'r1',
+      sourceTableId: 't2',
+      sourceColumnId: 't2-c1',
+      targetTableId: 't1',
+      targetColumnId: 't1-c1',
+      type: 'many-to-one',
+    }];
+    const warnings = validateSchema(tables, relations);
+    expect(warnings.some((w) => w.type === 'fk-incompatible-types')).toBe(false);
+  });
+
   it('errors on index referencing missing column', () => {
     const tables = [makeTable('t1', {
       indexes: [{ id: 'idx1', name: 'idx_test', columnIds: ['nonexistent'], isUnique: false }],
