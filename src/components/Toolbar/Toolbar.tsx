@@ -12,6 +12,7 @@ import { downloadText } from '@/utils/download';
 import { dedupName } from '@/utils/naming';
 import { saveCurrentSchema, loadSchemaByName, renameStoredSchema, getRecentList } from '@/hooks/useAutoSave';
 import { ALL_DIALECT_IDS, DIALECT_DISPLAY_NAMES } from '@/dialects';
+import { buildShareUrl } from '@/utils/url-share';
 import type { DialectId } from '@/types/schema';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -48,6 +49,7 @@ import {
   ClipboardPaste,
   Database,
   GitCompare,
+  Link2,
 } from 'lucide-react';
 import { useDiffStore } from '@/store/useDiffStore';
 
@@ -98,6 +100,23 @@ export default function Toolbar({ onSearchOpen, onExportOpen, onDiffOpen }: Tool
     const { tables, relations, schemaName: name, dialect: d } = useSchemaStore.getState();
     const json = exportJSON(tables, relations, name, d);
     navigator.clipboard.writeText(json);
+  }, []);
+
+  const handleCopyShareLink = useCallback(async () => {
+    const { tables, relations, schemaName: name, dialect: d } = useSchemaStore.getState();
+    if (tables.length === 0) {
+      toast('Nothing to share — add a table first');
+      return;
+    }
+    const url = buildShareUrl({ tables, relations, name, dialect: d });
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success('Share link copied', {
+        description: `${url.length} chars · recipients open Tabloid at this link to load the schema`,
+      });
+    } catch {
+      toast.error('Failed to copy link to clipboard');
+    }
   }, []);
 
   const handlePasteFromClipboard = useCallback(async () => {
@@ -273,6 +292,13 @@ export default function Toolbar({ onSearchOpen, onExportOpen, onDiffOpen }: Tool
           >
             <Clipboard className="size-4" />
             Copy to clipboard
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            data-testid="copy-share-link-btn"
+            onClick={handleCopyShareLink}
+          >
+            <Link2 className="size-4" />
+            Copy share link
           </DropdownMenuItem>
           <DropdownMenuItem
             data-testid="paste-clipboard-btn"
