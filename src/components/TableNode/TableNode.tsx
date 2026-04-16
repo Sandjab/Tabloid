@@ -18,7 +18,9 @@ import {
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 import { isMac } from '@/utils/platform';
-import { Plus, Copy, Pencil, StickyNote, Trash2, Palette, ListOrdered } from 'lucide-react';
+import { exportTableMarkdown } from '@/utils/export-markdown';
+import { toast } from 'sonner';
+import { Plus, Copy, FileText, Pencil, StickyNote, Trash2, Palette, ListOrdered } from 'lucide-react';
 import ColumnRow from './ColumnRow';
 import ColorPicker from './ColorPicker';
 import NotesPopover from './NotesPopover';
@@ -176,6 +178,17 @@ const TableNode = memo(function TableNode({ id, data, selected }: NodeProps<Tabl
           <Copy className="mr-2 size-3.5" />
           Duplicate table
           <ContextMenuShortcut>{isMac ? '⌘D' : 'Ctrl+D'}</ContextMenuShortcut>
+        </ContextMenuItem>
+        <ContextMenuItem
+          onClick={() => {
+            const md = exportTableMarkdown(table);
+            navigator.clipboard.writeText(md);
+            toast('Markdown copied to clipboard');
+          }}
+          data-testid={`ctx-copy-md-${id}`}
+        >
+          <FileText className="mr-2 size-3.5" />
+          Copy as Markdown
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuSub>
