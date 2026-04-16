@@ -47,14 +47,18 @@ import {
   Clipboard,
   ClipboardPaste,
   Database,
+  GitCompare,
 } from 'lucide-react';
+import { useDiffStore } from '@/store/useDiffStore';
 
 interface ToolbarProps {
   onSearchOpen: () => void;
   onExportOpen: () => void;
+  onDiffOpen: () => void;
 }
 
-export default function Toolbar({ onSearchOpen, onExportOpen }: ToolbarProps) {
+export default function Toolbar({ onSearchOpen, onExportOpen, onDiffOpen }: ToolbarProps) {
+  const diffBaseline = useDiffStore((s) => s.baseline);
   const addTable = useSchemaStore((s) => s.addTable);
   const loadSchema = useSchemaStore((s) => s.loadSchema);
   const schemaName = useSchemaStore((s) => s.schemaName);
@@ -407,6 +411,16 @@ export default function Toolbar({ onSearchOpen, onExportOpen }: ToolbarProps) {
       >
         <Download className="size-3.5" />
         Export
+      </Button>
+      <Button
+        variant={diffBaseline ? 'default' : 'ghost'}
+        size="sm"
+        onClick={onDiffOpen}
+        title="Diff schema & generate migration"
+        data-testid="diff-btn"
+      >
+        <GitCompare className="size-3.5" />
+        Diff
       </Button>
       <Button
         variant="ghost"

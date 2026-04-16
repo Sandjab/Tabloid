@@ -1,4 +1,5 @@
 import type { Column } from '@/types/schema';
+import type { Dialect } from './types';
 
 // Text-like types that need quoted default values
 const TEXT_TYPES = new Set([
@@ -26,4 +27,30 @@ export function defaultFormatType(column: Column): string {
     type += `(${column.precision}${column.scale != null ? `,${column.scale}` : ''})`;
   }
   return type;
+}
+
+// Builds a full column definition (name + type + constraints) used in both
+// CREATE TABLE and dialect-specific ADD/MODIFY COLUMN statements.
+export function columnDefinition(dialect: Dialect, col: Column): string {
+  const parts: string[] = [dialect.formatColumnName(col.name)];
+  parts.push(dialect.formatType(col));
+
+  if (col.type === 'SERIAL') {
+    const autoInc = dialect.formatAutoIncrement(col);
+    if (autoInc) parts.push(autoInc);
+  }
+
+  if (col.isPrimaryKey) parts.push('PRIMARY KEY');
+  if (!col.isNullable) parts.push('NOT NULL');
+  if (col.isUnique) parts.push('UNIQUE');
+  if (col.defaultValue != null) {
+    parts.push(`DEFAULT ${dialect.formatDefault(col.defaultValue, col.type)}`);
+  }
+
+  return parts.join(' ');
+}
+
+// Standard foreign key constraint name: fk_<srcTable>_<srcCol>
+export function defaultForeignKeyName(srcTable: string, srcCol: string): string {
+  return `fk_${srcTable}_${srcCol}`;
 }

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useSchemaStore } from '@/store/useSchemaStore';
 import { exportJSON } from '@/utils/export-json';
 import { importJSON } from '@/utils/import-json';
+import { renameSchemaTags } from '@/hooks/useTaggedVersions';
 import type { Table, Relation, DialectId } from '@/types/schema';
 
 const RECENT_KEY = 'tabloid-recent';
@@ -72,6 +73,7 @@ export function renameStoredSchema(oldName: string, newName: string): void {
     e.name === oldName ? { ...e, name: newName } : e,
   );
   saveRecentList(list);
+  renameSchemaTags(oldName, newName);
 }
 
 export function deleteStoredSchema(name: string): void {
