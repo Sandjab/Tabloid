@@ -1,6 +1,6 @@
 import type { Dialect, NativeTypeDefinition } from './types';
 import type { Column, ColumnType } from '@/types/schema';
-import { defaultFormatDefault, defaultFormatType } from './base';
+import { defaultFormatDefault, defaultFormatType, columnDefinition } from './base';
 
 const TYPE_MAP: Record<ColumnType, string> = {
   TEXT: 'TEXT',
@@ -45,4 +45,59 @@ export const sqlite: Dialect = {
   formatTableName(name: string): string { return `"${name}"`; },
   formatColumnName(name: string): string { return `"${name}"`; },
   supportsIfNotExists: true,
+
+  formatDropTable(name: string): string {
+    return `DROP TABLE IF EXISTS ${this.formatTableName(name)};`;
+  },
+  formatRenameTable(oldName: string, newName: string): string {
+    return `ALTER TABLE ${this.formatTableName(oldName)} RENAME TO ${this.formatTableName(newName)};`;
+  },
+
+  formatAddColumn(tableName: string, column: Column): string {
+    return `ALTER TABLE ${this.formatTableName(tableName)} ADD COLUMN ${columnDefinition(this, column)};`;
+  },
+  formatDropColumn(tableName: string, columnName: string): string {
+    // SQLite 3.35+ supports DROP COLUMN
+    return `ALTER TABLE ${this.formatTableName(tableName)} DROP COLUMN ${this.formatColumnName(columnName)}; -- WARNING: requires SQLite 3.35+`;
+  },
+  formatRenameColumn(tableName: string, oldName: string, newName: string): string {
+    return `ALTER TABLE ${this.formatTableName(tableName)} RENAME COLUMN ${this.formatColumnName(oldName)} TO ${this.formatColumnName(newName)}; -- WARNING: requires SQLite 3.25+`;
+  },
+
+  formatAlterColumn(
+    tableName: string,
+    _baseline: Column,
+    current: Column,
+  ): string[] {
+    return [
+      `-- WARNING: SQLite does not support ALTER COLUMN. To change \`${current.name}\` on \`${tableName}\`, recreate the table:`,
+      `--   1. BEGIN TRANSACTION;`,
+      `--   2. CREATE TABLE ${this.formatTableName(tableName + '_new')} (... new definition ...);`,
+      `--   3. INSERT INTO ${this.formatTableName(tableName + '_new')} SELECT ... FROM ${this.formatTableName(tableName)};`,
+      `--   4. DROP TABLE ${this.formatTableName(tableName)};`,
+      `--   5. ALTER TABLE ${this.formatTableName(tableName + '_new')} RENAME TO ${this.formatTableName(tableName)};`,
+      `--   6. COMMIT;`,
+    ];
+  },
+
+  formatAddForeignKey(): string {
+    return `-- WARNING: SQLite does not support ADD CONSTRAINT. Foreign keys must be declared at table creation.`;
+  },
+  formatDropForeignKey(): string {
+    return `-- WARNING: SQLite does not support DROP CONSTRAINT. Recreate the table without the FK.`;
+  },
+
+  formatCreateIndex(tableName, indexName, columnNames, isUnique): string {
+    const unique = isUnique ? ' UNIQUE' : '';
+    const cols = columnNames.map((n) => this.formatColumnName(n)).join(', ');
+    return `CREATE${unique} INDEX ${this.formatColumnName(indexName)} ON ${this.formatTableName(tableName)} (${cols});`;
+  },
+  formatDropIndex(_tableName: string, indexName: string): string {
+    return `DROP INDEX ${this.formatColumnName(indexName)};`;
+  },
+
+  // SQLite has no column-comment syntax.
+  formatColumnComment(): string {
+    return '';
+  },
 };

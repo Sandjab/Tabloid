@@ -9,6 +9,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { useColumnHighlight } from '@/hooks/useHighlight';
 import TypePicker from './TypePicker';
+import { useDiffColumnHighlight } from '@/hooks/useDiffHighlight';
 
 interface ColumnRowProps {
   tableId: string;
@@ -69,6 +70,7 @@ const ColumnRow = memo(function ColumnRow({
   const [descOpen, setDescOpen] = useState(false);
 
   const highlight = useColumnHighlight(tableId, column.id);
+  const diffStatus = useDiffColumnHighlight(tableId, column.id);
 
   const onNameSubmit = useCallback(
     (value: string) => updateColumnName(tableId, column.id, value),
@@ -88,7 +90,11 @@ const ColumnRow = memo(function ColumnRow({
             ? 'bg-red-500/10'
             : highlight === 'warning'
               ? 'bg-orange-500/10'
-              : ''
+              : diffStatus === 'added'
+                ? 'bg-emerald-500/10'
+                : diffStatus === 'modified'
+                  ? 'bg-amber-500/10'
+                  : ''
       }`}
       onDragOver={(e) => {
         e.preventDefault();

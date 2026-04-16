@@ -1,6 +1,6 @@
-import type { Dialect, NativeTypeDefinition } from './types';
+import type { Dialect, NativeTypeDefinition, AlterableColumnField } from './types';
 import type { Column, ColumnType } from '@/types/schema';
-import { defaultFormatDefault, formatDecimalPrecision, defaultFormatType } from './base';
+import { defaultFormatDefault, formatDecimalPrecision, defaultFormatType, columnDefinition } from './base';
 
 const TYPE_MAP: Record<ColumnType, string> = {
   TEXT: 'TEXT',
@@ -74,4 +74,78 @@ export const mysql: Dialect = {
   formatTableName(name: string): string { return `\`${name}\``; },
   formatColumnName(name: string): string { return `\`${name}\``; },
   supportsIfNotExists: true,
+
+  formatDropTable(name: string): string {
+    return `DROP TABLE IF EXISTS ${this.formatTableName(name)};`;
+  },
+  formatRenameTable(oldName: string, newName: string): string {
+    return `ALTER TABLE ${this.formatTableName(oldName)} RENAME TO ${this.formatTableName(newName)};`;
+  },
+
+  formatAddColumn(tableName: string, column: Column): string {
+    let stmt = `ALTER TABLE ${this.formatTableName(tableName)} ADD COLUMN ${columnDefinition(this, column)}`;
+    if (column.description) {
+      const esc = column.description.replace(/'/g, "''");
+      stmt += ` COMMENT '${esc}'`;
+    }
+    return `${stmt};`;
+  },
+  formatDropColumn(tableName: string, columnName: string): string {
+    return `ALTER TABLE ${this.formatTableName(tableName)} DROP COLUMN ${this.formatColumnName(columnName)};`;
+  },
+  formatRenameColumn(tableName: string, oldName: string, newName: string): string {
+    return `ALTER TABLE ${this.formatTableName(tableName)} RENAME COLUMN ${this.formatColumnName(oldName)} TO ${this.formatColumnName(newName)};`;
+  },
+
+  formatAlterColumn(
+    tableName: string,
+    _baseline: Column,
+    current: Column,
+    changes: AlterableColumnField[],
+  ): string[] {
+    const t = this.formatTableName(tableName);
+    const out: string[] = [];
+
+    // MySQL MODIFY replaces the full column definition. Always include COMMENT
+    // when the column has a description, so existing comments are preserved when
+    // only the type/nullability/default changes; and emit COMMENT '' to clear it
+    // when the user explicitly removes the description.
+    const modifyFields: AlterableColumnField[] = ['type', 'nullable', 'default', 'precision', 'scale', 'description'];
+    if (changes.some((ch) => modifyFields.includes(ch))) {
+      let stmt = `ALTER TABLE ${t} MODIFY COLUMN ${columnDefinition(this, current)}`;
+      if (current.description) {
+        const esc = current.description.replace(/'/g, "''");
+        stmt += ` COMMENT '${esc}'`;
+      } else if (changes.includes('description')) {
+        stmt += ` COMMENT ''`;
+      }
+      out.push(`${stmt};`);
+    }
+    if (changes.includes('primaryKey') || changes.includes('unique')) {
+      out.push(`-- TODO: primary key / unique constraint change on ${tableName}.${current.name} requires manual ADD/DROP CONSTRAINT`);
+    }
+    return out;
+  },
+
+  formatAddForeignKey(srcTable, srcCol, tgtTable, tgtCol, constraintName): string {
+    return `ALTER TABLE ${this.formatTableName(srcTable)} ADD CONSTRAINT ${this.formatColumnName(constraintName)} FOREIGN KEY (${this.formatColumnName(srcCol)}) REFERENCES ${this.formatTableName(tgtTable)} (${this.formatColumnName(tgtCol)});`;
+  },
+  formatDropForeignKey(tableName: string, constraintName: string): string {
+    return `ALTER TABLE ${this.formatTableName(tableName)} DROP FOREIGN KEY ${this.formatColumnName(constraintName)};`;
+  },
+
+  formatCreateIndex(tableName, indexName, columnNames, isUnique): string {
+    const unique = isUnique ? ' UNIQUE' : '';
+    const cols = columnNames.map((n) => this.formatColumnName(n)).join(', ');
+    return `CREATE${unique} INDEX ${this.formatColumnName(indexName)} ON ${this.formatTableName(tableName)} (${cols});`;
+  },
+  formatDropIndex(tableName: string, indexName: string): string {
+    return `DROP INDEX ${this.formatColumnName(indexName)} ON ${this.formatTableName(tableName)};`;
+  },
+
+  // MySQL carries the comment inline in ADD COLUMN / MODIFY COLUMN, so no
+  // standalone statement is needed.
+  formatColumnComment(): string {
+    return '';
+  },
 };

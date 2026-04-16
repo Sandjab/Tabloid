@@ -5,6 +5,7 @@ import { useSchemaStore } from '@/store/useSchemaStore';
 import { useInlineEdit } from '@/hooks/useInlineEdit';
 import type { TableFlowNode } from '@/types/schema';
 import { useTableHighlight } from '@/hooks/useHighlight';
+import { useDiffTableHighlight } from '@/hooks/useDiffHighlight';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   ContextMenu,
@@ -37,6 +38,7 @@ const TableNode = memo(function TableNode({ id, data, selected }: NodeProps<Tabl
   const duplicateTable = useSchemaStore((s) => s.duplicateTable);
 
   const highlight = useTableHighlight(id);
+  const diffStatus = useDiffTableHighlight(id);
 
   const addIndex = useSchemaStore((s) => s.addIndex);
   const [showColorPicker, setShowColorPicker] = useState(false);
@@ -75,9 +77,13 @@ const TableNode = memo(function TableNode({ id, data, selected }: NodeProps<Tabl
           ? 'border-red-500 ring-2 ring-red-500/30'
           : highlight === 'warning'
             ? 'border-orange-500 ring-2 ring-orange-500/30'
-            : selected
-              ? 'border-primary ring-2 ring-primary/30'
-              : 'border-border'
+            : diffStatus === 'added'
+              ? 'border-emerald-500 ring-2 ring-emerald-500/30'
+              : diffStatus === 'modified'
+                ? 'border-amber-500 ring-2 ring-amber-500/30'
+                : selected
+                  ? 'border-primary ring-2 ring-primary/30'
+                  : 'border-border'
       }`}
       data-testid={`table-node-${id}`}
     >

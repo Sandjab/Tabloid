@@ -1,6 +1,6 @@
-import type { Dialect, NativeTypeDefinition } from './types';
+import type { Dialect, NativeTypeDefinition, AlterableColumnField } from './types';
 import type { Column, ColumnType } from '@/types/schema';
-import { defaultFormatDefault, formatDecimalPrecision, defaultFormatType } from './base';
+import { defaultFormatDefault, formatDecimalPrecision, defaultFormatType, columnDefinition } from './base';
 
 const TYPE_MAP: Record<ColumnType, string> = {
   TEXT: 'NVARCHAR(MAX)',
@@ -79,4 +79,76 @@ export const sqlserver: Dialect = {
   formatTableName(name: string): string { return `[${name}]`; },
   formatColumnName(name: string): string { return `[${name}]`; },
   supportsIfNotExists: false,
+
+  formatDropTable(name: string): string {
+    return `DROP TABLE ${this.formatTableName(name)};`;
+  },
+  formatRenameTable(oldName: string, newName: string): string {
+    return `EXEC sp_rename '${oldName}', '${newName}';`;
+  },
+
+  formatAddColumn(tableName: string, column: Column): string {
+    return `ALTER TABLE ${this.formatTableName(tableName)} ADD ${columnDefinition(this, column)};`;
+  },
+  formatDropColumn(tableName: string, columnName: string): string {
+    return `ALTER TABLE ${this.formatTableName(tableName)} DROP COLUMN ${this.formatColumnName(columnName)};`;
+  },
+  formatRenameColumn(tableName: string, oldName: string, newName: string): string {
+    return `EXEC sp_rename '${tableName}.${oldName}', '${newName}', 'COLUMN';`;
+  },
+
+  formatAlterColumn(
+    tableName: string,
+    _baseline: Column,
+    current: Column,
+    changes: AlterableColumnField[],
+  ): string[] {
+    const t = this.formatTableName(tableName);
+    const col = this.formatColumnName(current.name);
+    const out: string[] = [];
+
+    const needsAlter =
+      changes.includes('type') ||
+      changes.includes('nullable') ||
+      changes.includes('precision') ||
+      changes.includes('scale');
+    if (needsAlter) {
+      const nullability = current.isNullable ? 'NULL' : 'NOT NULL';
+      out.push(`ALTER TABLE ${t} ALTER COLUMN ${col} ${this.formatType(current)} ${nullability};`);
+    }
+    if (changes.includes('default')) {
+      out.push(`-- TODO: SQL Server DEFAULT is a named constraint. Drop existing default constraint on ${tableName}.${current.name}, then:`);
+      if (current.defaultValue != null) {
+        out.push(`-- ALTER TABLE ${t} ADD CONSTRAINT df_${tableName}_${current.name} DEFAULT ${this.formatDefault(current.defaultValue, current.type)} FOR ${col};`);
+      }
+    }
+    if (changes.includes('description')) {
+      out.push(`-- TODO: SQL Server column description uses sp_addextendedproperty / sp_updateextendedproperty`);
+    }
+    if (changes.includes('primaryKey') || changes.includes('unique')) {
+      out.push(`-- TODO: primary key / unique constraint change on ${tableName}.${current.name} requires manual ADD/DROP CONSTRAINT`);
+    }
+    return out;
+  },
+
+  formatAddForeignKey(srcTable, srcCol, tgtTable, tgtCol, constraintName): string {
+    return `ALTER TABLE ${this.formatTableName(srcTable)} ADD CONSTRAINT ${this.formatColumnName(constraintName)} FOREIGN KEY (${this.formatColumnName(srcCol)}) REFERENCES ${this.formatTableName(tgtTable)} (${this.formatColumnName(tgtCol)});`;
+  },
+  formatDropForeignKey(tableName: string, constraintName: string): string {
+    return `ALTER TABLE ${this.formatTableName(tableName)} DROP CONSTRAINT ${this.formatColumnName(constraintName)};`;
+  },
+
+  formatCreateIndex(tableName, indexName, columnNames, isUnique): string {
+    const unique = isUnique ? ' UNIQUE' : '';
+    const cols = columnNames.map((n) => this.formatColumnName(n)).join(', ');
+    return `CREATE${unique} INDEX ${this.formatColumnName(indexName)} ON ${this.formatTableName(tableName)} (${cols});`;
+  },
+  formatDropIndex(tableName: string, indexName: string): string {
+    return `DROP INDEX ${this.formatColumnName(indexName)} ON ${this.formatTableName(tableName)};`;
+  },
+
+  formatColumnComment(tableName: string, columnName: string, description: string): string {
+    const esc = description.replace(/'/g, "''");
+    return `EXEC sp_addextendedproperty @name = N'MS_Description', @value = N'${esc}', @level0type = N'SCHEMA', @level0name = N'dbo', @level1type = N'TABLE', @level1name = N'${tableName}', @level2type = N'COLUMN', @level2name = N'${columnName}';`;
+  },
 };
