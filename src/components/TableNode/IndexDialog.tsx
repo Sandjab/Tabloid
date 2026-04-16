@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -21,6 +21,8 @@ interface IndexDialogProps {
   onCancel: () => void;
 }
 
+// Callers should conditionally mount this dialog (e.g. `{open && <IndexDialog ... />}`)
+// so internal state is reset each time it opens, rather than managing reset via effects.
 export default function IndexDialog({
   open,
   columns,
@@ -32,25 +34,18 @@ export default function IndexDialog({
 }: IndexDialogProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>(initialColumnIds ?? []);
   const [isUnique, setIsUnique] = useState(initialIsUnique ?? false);
-  const [name, setName] = useState(initialName ?? '');
+  const [nameOverride, setNameOverride] = useState<string | null>(initialName ?? null);
 
-  // Auto-generate name from selected columns
-  useEffect(() => {
-    if (initialName) return; // don't override manual name in edit mode
+  // Auto-generated name derived from currently-selected columns. Used whenever
+  // the user hasn't manually typed a name (nameOverride === null).
+  const autoName = useMemo(() => {
     const colNames = selectedIds
       .map((id) => columns.find((c) => c.id === id)?.name)
       .filter(Boolean);
-    setName(colNames.length > 0 ? `idx_${colNames.join('_')}` : '');
-  }, [selectedIds, columns, initialName]);
+    return colNames.length > 0 ? `idx_${colNames.join('_')}` : '';
+  }, [selectedIds, columns]);
 
-  // Reset state when dialog opens
-  useEffect(() => {
-    if (open) {
-      setSelectedIds(initialColumnIds ?? []);
-      setIsUnique(initialIsUnique ?? false);
-      setName(initialName ?? '');
-    }
-  }, [open, initialColumnIds, initialIsUnique, initialName]);
+  const name = nameOverride ?? autoName;
 
   const toggleColumn = (colId: string) => {
     setSelectedIds((prev) =>
@@ -80,7 +75,7 @@ export default function IndexDialog({
             <label className="mb-1 block text-xs font-medium text-muted-foreground">Name</label>
             <Input
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => setNameOverride(e.target.value)}
               data-testid="index-name-input"
             />
           </div>

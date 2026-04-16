@@ -93,13 +93,15 @@ export default function IndexSection({ tableId, indexes, columns, onHoverIndex }
         </button>
       </div>
 
-      {/* Create dialog */}
-      <IndexDialog
-        open={dialogOpen}
-        columns={columns}
-        onConfirm={handleCreate}
-        onCancel={() => setDialogOpen(false)}
-      />
+      {/* Create dialog — conditionally mounted so internal state resets on each open */}
+      {dialogOpen && (
+        <IndexDialog
+          open
+          columns={columns}
+          onConfirm={handleCreate}
+          onCancel={() => setDialogOpen(false)}
+        />
+      )}
 
       {/* Edit dialog */}
       {editingIndex && (
