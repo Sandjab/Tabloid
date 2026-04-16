@@ -8,6 +8,8 @@ import { computeAutoLayout } from '@/utils/auto-layout';
 import { exportJSON } from '@/utils/export-json';
 import { importJSON } from '@/utils/import-json';
 import { parseSQL } from '@/utils/import-sql';
+import { parseDBML } from '@/utils/import-dbml';
+import { parsePrisma } from '@/utils/import-prisma';
 import { downloadText } from '@/utils/download';
 import { dedupName } from '@/utils/naming';
 import { saveCurrentSchema, loadSchemaByName, renameStoredSchema, getRecentList } from '@/hooks/useAutoSave';
@@ -187,8 +189,22 @@ export default function Toolbar({ onSearchOpen, onExportOpen, onDiffOpen }: Tool
         try {
           saveCurrentSchema();
           const content = reader.result as string;
-          const isSql = file.name.endsWith('.sql') || /^\s*(--|\/\*|CREATE\s|ALTER\s)/i.test(content);
-          const result = isSql ? parseSQL(content) : importJSON(content);
+          const lower = file.name.toLowerCase();
+          const looksLikeSql = /^\s*(--|\/\*|CREATE\s|ALTER\s)/i.test(content);
+          const looksLikeDBML = /^\s*(?:\/\/|\/\*|Table\s+[A-Za-z_"]|Ref[\s:])/m.test(content);
+          const looksLikePrisma = /^\s*model\s+[A-Za-z_]/m.test(content);
+
+          let result;
+          if (lower.endsWith('.dbml') || (looksLikeDBML && !looksLikeSql && !looksLikePrisma)) {
+            result = parseDBML(content);
+          } else if (lower.endsWith('.prisma') || looksLikePrisma) {
+            result = parsePrisma(content);
+          } else if (lower.endsWith('.sql') || looksLikeSql) {
+            result = parseSQL(content);
+          } else {
+            result = importJSON(content);
+          }
+
           const existingNames = getRecentList().map((entry) => entry.name);
           const safeName = dedupName(result.name, existingNames);
           const importedDialect = 'dialect' in result ? (result as { dialect: DialectId }).dialect : undefined;
@@ -435,7 +451,7 @@ export default function Toolbar({ onSearchOpen, onExportOpen, onDiffOpen }: Tool
       <input
         ref={fileInputRef}
         type="file"
-        accept=".json,.sql"
+        accept=".json,.sql,.dbml,.prisma"
         className="hidden"
         onChange={handleFileChange}
         data-testid="import-file-input"
