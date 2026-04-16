@@ -56,12 +56,19 @@ function stripComments(text: string): string {
   return out;
 }
 
-function normalizeType(raw: string): { type: string; precision?: number; scale?: number } {
+function normalizeType(raw: string): {
+  type: string;
+  precision?: number;
+  scale?: number;
+  length?: number;
+} {
   const m = raw.match(/^([A-Za-z_]+)(?:\(([^)]+)\))?$/);
   if (!m) return { type: raw.toUpperCase() };
   const base = DBML_TYPE_MAP[m[1].toLowerCase()] ?? m[1].toUpperCase();
   const args = m[2];
-  if (args && base === 'DECIMAL') {
+  if (!args) return { type: base };
+
+  if (base === 'DECIMAL') {
     const [p, s] = args.split(',').map((x) => parseInt(x.trim(), 10));
     return {
       type: base,
@@ -69,6 +76,10 @@ function normalizeType(raw: string): { type: string; precision?: number; scale?:
       scale: Number.isNaN(s) ? undefined : s,
     };
   }
+
+  // Everything else with a single numeric arg is a length (VARCHAR(255), CHAR(4), ...).
+  const l = parseInt(args.trim(), 10);
+  if (!Number.isNaN(l)) return { type: base, length: l };
   return { type: base };
 }
 
@@ -149,18 +160,20 @@ export function parseDBML(dbml: string): ImportResult {
     for (const rawLine of body.split('\n')) {
       const line = rawLine.trim();
       if (!line) continue;
-      if (/^(indexes|note)\b/i.test(line)) continue;
+      // Only skip when followed by : or { — otherwise a column named
+      // `indexes` or `note` would be wrongly dropped.
+      if (/^(indexes|note)\s*[:{]/i.test(line)) continue;
       if (line === '{' || line === '}') continue;
 
       const colMatch = line.match(
-        /^(?:"([^"]+)"|([A-Za-z_][A-Za-z0-9_]*))\s+([A-Za-z_][A-Za-z0-9_]*(?:\([^)]+\))?)\s*(\[[^\]]*\])?\s*(?:\/\/.*)?$/,
+        /^(?:"([^"]+)"|([A-Za-z_][A-Za-z0-9_]*))\s+(?:"([^"]+)"|([A-Za-z_][A-Za-z0-9_]*(?:\([^)]+\))?))\s*(\[[^\]]*\])?\s*(?:\/\/.*)?$/,
       );
       if (!colMatch) continue;
 
       const colName = colMatch[1] ?? colMatch[2];
-      const typeStr = colMatch[3];
-      const settings = parseSettings(colMatch[4]);
-      const { type, precision, scale } = normalizeType(typeStr);
+      const typeStr = colMatch[3] ?? colMatch[4];
+      const settings = parseSettings(colMatch[5]);
+      const { type, precision, scale, length } = normalizeType(typeStr);
 
       const column: Column = {
         id: createColumnId(),
@@ -172,6 +185,7 @@ export function parseDBML(dbml: string): ImportResult {
       };
       if (precision !== undefined) column.precision = precision;
       if (scale !== undefined) column.scale = scale;
+      if (length !== undefined) column.length = length;
 
       for (const s of settings) {
         const lower = s.toLowerCase();
@@ -216,26 +230,49 @@ export function parseDBML(dbml: string): ImportResult {
     col++;
   }
 
-  // Top-level Ref statements: `Ref: a.x > b.y` or `Ref name { a.x > b.y }`
-  const refRegex = /Ref(?:\s+[A-Za-z_][A-Za-z0-9_]*)?\s*(?::|\{)\s*(?:"([^"]+)"|([A-Za-z_][A-Za-z0-9_.]*))\.(?:"([^"]+)"|([A-Za-z_][A-Za-z0-9_]*))\s*(<>|[<>-])\s*(?:"([^"]+)"|([A-Za-z_][A-Za-z0-9_.]*))\.(?:"([^"]+)"|([A-Za-z_][A-Za-z0-9_]*))/g;
-  let rm: RegExpExecArray | null;
-  while ((rm = refRegex.exec(text)) !== null) {
-    const srcTable = rm[1] ?? rm[2];
-    const srcCol = rm[3] ?? rm[4];
-    const op = rm[5];
-    const tgtTable = rm[6] ?? rm[7];
-    const tgtCol = rm[8] ?? rm[9];
-    const src = columnByFullName.get(`${srcTable.toLowerCase()}.${srcCol.toLowerCase()}`);
-    const tgt = columnByFullName.get(`${tgtTable.toLowerCase()}.${tgtCol.toLowerCase()}`);
-    if (src && tgt) {
-      relations.push({
-        id: createRelationId(),
-        sourceTableId: src.table.id,
-        sourceColumnId: src.column.id,
-        targetTableId: tgt.table.id,
-        targetColumnId: tgt.column.id,
-        type: opToRelationType(op),
-      });
+  // Top-level Ref statements. DBML supports both single-line and block form:
+  //   Ref: posts.user_id > users.id
+  //   Ref my_ref { a.x > b.y; c.y < d.z }   // block, 1+ relations
+  // First step: locate each Ref header, slice its body (inline = to newline,
+  // block = balanced braces), then scan each body for individual relation lines.
+  const refHeaderRegex = /Ref(?:\s+[A-Za-z_][A-Za-z0-9_]*)?\s*([:{])/gi;
+  const relRegex = /(?:"([^"]+)"|([A-Za-z_][A-Za-z0-9_.]*))\.(?:"([^"]+)"|([A-Za-z_][A-Za-z0-9_]*))\s*(<>|[<>-])\s*(?:"([^"]+)"|([A-Za-z_][A-Za-z0-9_.]*))\.(?:"([^"]+)"|([A-Za-z_][A-Za-z0-9_]*))/g;
+  let rh: RegExpExecArray | null;
+  while ((rh = refHeaderRegex.exec(text)) !== null) {
+    const isBlock = rh[1] === '{';
+    let body: string;
+    if (isBlock) {
+      const braceIdx = rh.index + rh[0].length - 1;
+      const closeIdx = findMatchingBrace(text, braceIdx);
+      if (closeIdx === -1) continue;
+      body = text.slice(braceIdx + 1, closeIdx);
+      refHeaderRegex.lastIndex = closeIdx + 1;
+    } else {
+      const endIdx = text.indexOf('\n', rh.index + rh[0].length);
+      body = text.slice(rh.index + rh[0].length, endIdx === -1 ? text.length : endIdx);
+      refHeaderRegex.lastIndex = endIdx === -1 ? text.length : endIdx;
+    }
+
+    relRegex.lastIndex = 0;
+    let rm: RegExpExecArray | null;
+    while ((rm = relRegex.exec(body)) !== null) {
+      const srcTable = rm[1] ?? rm[2];
+      const srcCol = rm[3] ?? rm[4];
+      const op = rm[5];
+      const tgtTable = rm[6] ?? rm[7];
+      const tgtCol = rm[8] ?? rm[9];
+      const src = columnByFullName.get(`${srcTable.toLowerCase()}.${srcCol.toLowerCase()}`);
+      const tgt = columnByFullName.get(`${tgtTable.toLowerCase()}.${tgtCol.toLowerCase()}`);
+      if (src && tgt) {
+        relations.push({
+          id: createRelationId(),
+          sourceTableId: src.table.id,
+          sourceColumnId: src.column.id,
+          targetTableId: tgt.table.id,
+          targetColumnId: tgt.column.id,
+          type: opToRelationType(op),
+        });
+      }
     }
   }
 

@@ -134,4 +134,90 @@ Table users {
     expect(tables[0].columns[0].isPrimaryKey).toBe(true);
     expect(tables[0].columns[0].type).toBe('SERIAL');
   });
+
+  // --- Review-driven improvements ---
+
+  it('preserves length for VARCHAR and CHAR types', () => {
+    const dbml = `
+Table users {
+  id int [pk]
+  email varchar(255)
+  code char(4)
+}
+`;
+    const { tables } = parseDBML(dbml);
+    const email = tables[0].columns.find((c) => c.name === 'email')!;
+    const code = tables[0].columns.find((c) => c.name === 'code')!;
+    expect(email.length).toBe(255);
+    expect(code.length).toBe(4);
+  });
+
+  it('parses a Ref block with multiple relations', () => {
+    const dbml = `
+Table users {
+  id int [pk]
+}
+Table posts {
+  id int [pk]
+  user_id int
+  reviewer_id int
+}
+Table reviews {
+  id int [pk]
+  post_id int
+}
+
+Ref my_refs {
+  posts.user_id > users.id
+  posts.reviewer_id > users.id
+  reviews.post_id > posts.id
+}
+`;
+    const { relations } = parseDBML(dbml);
+    expect(relations).toHaveLength(3);
+    expect(relations.every((r) => r.type === 'many-to-one')).toBe(true);
+  });
+
+  it('does not skip a column named `indexes` or `note`', () => {
+    const dbml = `
+Table meta {
+  id int [pk]
+  indexes text
+  note text
+}
+`;
+    const { tables } = parseDBML(dbml);
+    const names = tables[0].columns.map((c) => c.name);
+    expect(names).toContain('indexes');
+    expect(names).toContain('note');
+  });
+
+  it('still skips genuine indexes { } and Note: blocks', () => {
+    const dbml = `
+Table users {
+  id int [pk]
+  email varchar(255)
+  Note: 'A user'
+  indexes {
+    (email) [unique]
+  }
+}
+`;
+    const { tables } = parseDBML(dbml);
+    expect(tables).toHaveLength(1);
+    const names = tables[0].columns.map((c) => c.name);
+    expect(names).toEqual(['id', 'email']);
+  });
+
+  it('parses a quoted custom type', () => {
+    const dbml = `
+Table x {
+  id int [pk]
+  data "my custom type"
+}
+`;
+    const { tables } = parseDBML(dbml);
+    const data = tables[0].columns.find((c) => c.name === 'data')!;
+    expect(data.type.toLowerCase()).toBe('my custom type');
+  });
 });
