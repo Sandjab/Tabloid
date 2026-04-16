@@ -6,6 +6,9 @@ import ExportDialog from '@/components/ExportDialog/ExportDialog';
 import DiffDialog from '@/components/DiffDialog/DiffDialog';
 import ValidationDialog from '@/components/ValidationDialog/ValidationDialog';
 import { useAutoSave, loadFromLocalStorage } from '@/hooks/useAutoSave';
+import { useSchemaStore } from '@/store/useSchemaStore';
+import { decodeSchemaFromHash, clearShareHash } from '@/utils/url-share';
+import { toast } from 'sonner';
 
 export default function App() {
   const [searchOpen, setSearchOpen] = useState(false);
@@ -19,7 +22,23 @@ export default function App() {
   const openLint = useCallback(() => setLintOpen(true), []);
 
   useAutoSave();
-  useEffect(() => { loadFromLocalStorage(); }, []);
+  useEffect(() => {
+    // Shared URL takes precedence over localStorage — a pasted link should show
+    // that link's schema, not whatever was last edited locally.
+    const shared = decodeSchemaFromHash(window.location.hash);
+    if (shared) {
+      useSchemaStore.getState().loadSchema(
+        shared.tables,
+        shared.relations,
+        shared.name,
+        shared.dialect,
+      );
+      clearShareHash();
+      toast(`Loaded shared schema "${shared.name}"`);
+      return;
+    }
+    loadFromLocalStorage();
+  }, []);
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-background">

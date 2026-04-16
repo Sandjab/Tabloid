@@ -304,16 +304,19 @@ const TableNode = memo(function TableNode({ id, data, selected }: NodeProps<Tabl
         )}
       </div>
 
-      {/* Index dialog triggered from context menu */}
-      <IndexDialog
-        open={showIndexDialog}
-        columns={table.columns}
-        onConfirm={(name, columnIds, isUnique) => {
-          addIndex(id, name, columnIds, isUnique);
-          setShowIndexDialog(false);
-        }}
-        onCancel={() => setShowIndexDialog(false)}
-      />
+      {/* Index dialog triggered from context menu — conditionally mounted so
+          internal state resets on each open */}
+      {showIndexDialog && (
+        <IndexDialog
+          open
+          columns={table.columns}
+          onConfirm={(name, columnIds, isUnique) => {
+            addIndex(id, name, columnIds, isUnique);
+            setShowIndexDialog(false);
+          }}
+          onCancel={() => setShowIndexDialog(false)}
+        />
+      )}
     </div>
   );
 });

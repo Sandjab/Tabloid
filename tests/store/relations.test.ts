@@ -204,7 +204,7 @@ describe('self-referencing relation', () => {
     const col1 = cols[0].id;
     const col2 = cols[1].id;
 
-    const relId = useSchemaStore.getState().addRelation(id1, col1, id1, col2, 'one-to-many', 'right', 'right');
+    useSchemaStore.getState().addRelation(id1, col1, id1, col2, 'one-to-many', 'right', 'right');
 
     const { relations, edges } = useSchemaStore.getState();
     expect(relations).toHaveLength(1);
