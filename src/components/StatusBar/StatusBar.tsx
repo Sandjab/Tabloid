@@ -9,6 +9,7 @@ const zoomSelector = (s: { transform: [number, number, number] }) =>
 export default function StatusBar() {
   const tables = useSchemaStore((s) => s.tables);
   const relations = useSchemaStore((s) => s.relations);
+  const dialect = useSchemaStore((s) => s.dialect);
   const nodes = useSchemaStore((s) => s.nodes);
   const onNodesChange = useSchemaStore((s) => s.onNodesChange);
   const zoom = useStore(zoomSelector);
@@ -30,8 +31,8 @@ export default function StatusBar() {
   const selectedCount = nodes.filter((n) => n.selected).length;
 
   const warnings = useMemo(
-    () => validateSchema(tables, relations),
-    [tables, relations],
+    () => validateSchema(tables, relations, dialect),
+    [tables, relations, dialect],
   );
 
   const errors = warnings.filter((w) => w.severity === 'error');

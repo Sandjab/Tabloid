@@ -1,25 +1,31 @@
 import { COLUMN_TYPES } from '@/types/schema';
-import type { Table, Relation, Column, ColumnType, HandleSide, Index } from '@/types/schema';
+import type { Table, Relation, Column, ColumnType, DialectId, HandleSide, Index } from '@/types/schema';
+import { ALL_DIALECT_IDS } from '@/dialects';
 
 interface ImportResult {
   tables: Table[];
   relations: Relation[];
   name: string;
+  dialect: DialectId;
 }
 
 function isValidColumnType(type: string): type is ColumnType {
   return (COLUMN_TYPES as readonly string[]).includes(type);
 }
 
-function validateColumn(col: unknown, index: number, tableId: string): Column {
+function validateColumn(col: unknown, index: number, tableId: string, dialectId: DialectId): Column {
   if (typeof col !== 'object' || col === null) {
     throw new Error(`Invalid column at index ${index} in table ${tableId}`);
   }
   const c = col as Record<string, unknown>;
   if (typeof c.id !== 'string') throw new Error(`Column missing id in table ${tableId}`);
   if (typeof c.name !== 'string') throw new Error(`Column missing name in table ${tableId}`);
-  if (typeof c.type !== 'string' || !isValidColumnType(c.type)) {
+  if (typeof c.type !== 'string') {
     throw new Error(`Invalid column type "${String(c.type)}" in table ${tableId}`);
+  }
+  // In generic mode, validate against abstract types; in native mode accept any string
+  if (dialectId === 'generic' && !isValidColumnType(c.type)) {
+    throw new Error(`Invalid column type "${c.type}" in table ${tableId}`);
   }
   return {
     id: c.id,
@@ -29,6 +35,8 @@ function validateColumn(col: unknown, index: number, tableId: string): Column {
     isNullable: c.isNullable !== false,
     isUnique: c.isUnique === true,
     defaultValue: typeof c.defaultValue === 'string' ? c.defaultValue : undefined,
+    description: typeof c.description === 'string' ? c.description : undefined,
+    length: typeof c.length === 'number' ? c.length : undefined,
     precision: typeof c.precision === 'number' ? c.precision : undefined,
     scale: typeof c.scale === 'number' ? c.scale : undefined,
   };
@@ -52,7 +60,7 @@ function validateIndex(idx: unknown, index: number, tableId: string): Index {
   };
 }
 
-function validateTable(table: unknown, index: number): Table {
+function validateTable(table: unknown, index: number, dialectId: DialectId): Table {
   if (typeof table !== 'object' || table === null) {
     throw new Error(`Invalid table at index ${index}`);
   }
@@ -70,7 +78,7 @@ function validateTable(table: unknown, index: number): Table {
   return {
     id: t.id,
     name: t.name,
-    columns: t.columns.map((c: unknown, i: number) => validateColumn(c, i, t.id as string)),
+    columns: t.columns.map((c: unknown, i: number) => validateColumn(c, i, t.id as string, dialectId)),
     color: typeof t.color === 'string' ? t.color : undefined,
     notes: typeof t.notes === 'string' ? t.notes : undefined,
     indexes,
@@ -133,8 +141,13 @@ export function importJSON(raw: string): ImportResult {
     throw new Error(`Unsupported version: ${String(doc.version)}`);
   }
 
+  const dialect: DialectId = typeof doc.dialect === 'string'
+    && (ALL_DIALECT_IDS as readonly string[]).includes(doc.dialect)
+    ? (doc.dialect as DialectId)
+    : 'generic';
+
   const tables = Array.isArray(doc.tables)
-    ? doc.tables.map((t: unknown, i: number) => validateTable(t, i))
+    ? doc.tables.map((t: unknown, i: number) => validateTable(t, i, dialect))
     : [];
 
   const relations = Array.isArray(doc.relations)
@@ -145,5 +158,6 @@ export function importJSON(raw: string): ImportResult {
     tables,
     relations,
     name: typeof doc.name === 'string' ? doc.name : 'Imported Schema',
+    dialect,
   };
 }

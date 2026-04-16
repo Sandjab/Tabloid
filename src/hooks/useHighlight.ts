@@ -5,7 +5,8 @@ import { validateSchema } from '@/utils/validate-schema';
 function useValidationWarnings() {
   const tables = useSchemaStore((s) => s.tables);
   const relations = useSchemaStore((s) => s.relations);
-  return useMemo(() => validateSchema(tables, relations), [tables, relations]);
+  const dialect = useSchemaStore((s) => s.dialect);
+  return useMemo(() => validateSchema(tables, relations, dialect), [tables, relations, dialect]);
 }
 
 export function useTableHighlight(tableId: string): 'error' | 'warning' | null {

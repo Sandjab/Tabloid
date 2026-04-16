@@ -11,9 +11,18 @@ import { parseSQL } from '@/utils/import-sql';
 import { downloadText } from '@/utils/download';
 import { dedupName } from '@/utils/naming';
 import { saveCurrentSchema, loadSchemaByName, renameStoredSchema, getRecentList } from '@/hooks/useAutoSave';
+import { ALL_DIALECT_IDS, DIALECT_DISPLAY_NAMES } from '@/dialects';
+import type { DialectId } from '@/types/schema';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,6 +46,7 @@ import {
   FilePlus2,
   Clipboard,
   ClipboardPaste,
+  Database,
 } from 'lucide-react';
 
 interface ToolbarProps {
@@ -49,6 +59,8 @@ export default function Toolbar({ onSearchOpen, onExportOpen }: ToolbarProps) {
   const loadSchema = useSchemaStore((s) => s.loadSchema);
   const schemaName = useSchemaStore((s) => s.schemaName);
   const setSchemaName = useSchemaStore((s) => s.setSchemaName);
+  const dialect = useSchemaStore((s) => s.dialect);
+  const setDialect = useSchemaStore((s) => s.setDialect);
   const { screenToFlowPosition, fitView } = useReactFlow();
   const { undo, redo, canUndo, canRedo } = useUndoRedo();
   const { theme, toggleTheme } = useTheme();
@@ -79,8 +91,8 @@ export default function Toolbar({ onSearchOpen, onExportOpen }: ToolbarProps) {
   }, [loadSchema]);
 
   const handleCopyToClipboard = useCallback(() => {
-    const { tables, relations, schemaName: name } = useSchemaStore.getState();
-    const json = exportJSON(tables, relations, name);
+    const { tables, relations, schemaName: name, dialect: d } = useSchemaStore.getState();
+    const json = exportJSON(tables, relations, name, d);
     navigator.clipboard.writeText(json);
   }, []);
 
@@ -88,10 +100,10 @@ export default function Toolbar({ onSearchOpen, onExportOpen }: ToolbarProps) {
     try {
       const text = await navigator.clipboard.readText();
       saveCurrentSchema();
-      const { tables, relations, name } = importJSON(text);
+      const { tables, relations, name, dialect: d } = importJSON(text);
       const existingNames = getRecentList().map((e) => e.name);
       const safeName = dedupName(name, existingNames);
-      loadSchema(tables, relations, safeName);
+      loadSchema(tables, relations, safeName, d);
       fitView({ padding: 0.2, duration: 300 });
     } catch (err) {
       alert(`Paste failed: ${err instanceof Error ? err.message : 'Invalid clipboard content'}`);
@@ -124,8 +136,8 @@ export default function Toolbar({ onSearchOpen, onExportOpen }: ToolbarProps) {
   }, [fitView]);
 
   const handleSave = useCallback(() => {
-    const { tables, relations, schemaName: name } = useSchemaStore.getState();
-    const json = exportJSON(tables, relations, name);
+    const { tables, relations, schemaName: name, dialect: d } = useSchemaStore.getState();
+    const json = exportJSON(tables, relations, name, d);
     downloadText(json, `${name}.tabloid.json`, 'application/json');
     toast(`Saved ${name}.tabloid.json`);
   }, []);
@@ -142,10 +154,10 @@ export default function Toolbar({ onSearchOpen, onExportOpen }: ToolbarProps) {
       reader.onload = () => {
         try {
           saveCurrentSchema();
-          const { tables, relations, name } = importJSON(reader.result as string);
+          const { tables, relations, name, dialect: d } = importJSON(reader.result as string);
           const existingNames = getRecentList().map((entry) => entry.name);
           const safeName = dedupName(name, existingNames);
-          loadSchema(tables, relations, safeName);
+          loadSchema(tables, relations, safeName, d);
           fitView({ padding: 0.2, duration: 300 });
           toast('Previous schema available in recents');
         } catch (err) {
@@ -172,10 +184,11 @@ export default function Toolbar({ onSearchOpen, onExportOpen }: ToolbarProps) {
           saveCurrentSchema();
           const content = reader.result as string;
           const isSql = file.name.endsWith('.sql') || /^\s*(--|\/\*|CREATE\s|ALTER\s)/i.test(content);
-          const { tables, relations, name } = isSql ? parseSQL(content) : importJSON(content);
+          const result = isSql ? parseSQL(content) : importJSON(content);
           const existingNames = getRecentList().map((entry) => entry.name);
-          const safeName = dedupName(name, existingNames);
-          loadSchema(tables, relations, safeName);
+          const safeName = dedupName(result.name, existingNames);
+          const importedDialect = 'dialect' in result ? (result as { dialect: DialectId }).dialect : undefined;
+          loadSchema(result.tables, result.relations, safeName, importedDialect);
           fitView({ padding: 0.2, duration: 300 });
         } catch (err) {
           alert(`Import failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -279,6 +292,30 @@ export default function Toolbar({ onSearchOpen, onExportOpen }: ToolbarProps) {
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <Separator orientation="vertical" className="mx-0.5 h-6" />
+
+      {/* Dialect selector */}
+      <Select
+        value={dialect}
+        onValueChange={(val) => { if (val) setDialect(val as DialectId); }}
+      >
+        <SelectTrigger
+          size="sm"
+          className="h-7 gap-1 border-none bg-transparent px-2 text-xs shadow-none hover:bg-accent"
+          data-testid="dialect-select"
+        >
+          <Database className="size-3.5 text-muted-foreground" />
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {ALL_DIALECT_IDS.map((d) => (
+            <SelectItem key={d} value={d}>
+              {DIALECT_DISPLAY_NAMES[d]}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
       <Separator orientation="vertical" className="mx-0.5 h-6" />
 

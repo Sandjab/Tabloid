@@ -1,11 +1,27 @@
-import type { Table, Relation } from '@/types/schema';
+import type { Table, Relation, DialectId } from '@/types/schema';
 import type { Dialect } from '@/dialects/types';
+
+// Auto-increment type names by dialect
+const SERIAL_TYPES: Record<string, Set<string>> = {
+  generic: new Set(['SERIAL']),
+  postgresql: new Set(['SERIAL', 'BIGSERIAL', 'SMALLSERIAL']),
+  mysql: new Set(), // MySQL uses AUTO_INCREMENT keyword, not a type
+  sqlite: new Set(), // SQLite uses AUTOINCREMENT keyword
+  oracle: new Set(), // Oracle uses GENERATED AS IDENTITY
+  sqlserver: new Set(), // SQL Server uses IDENTITY
+};
+
+function isAutoIncrementType(type: string, dialectId: DialectId): boolean {
+  return SERIAL_TYPES[dialectId]?.has(type) ?? type === 'SERIAL';
+}
 
 export function exportSQL(
   tables: Table[],
   relations: Relation[],
   dialect: Dialect,
+  projectDialect: DialectId = 'generic',
 ): string {
+  const isNative = projectDialect !== 'generic';
   const statements: string[] = [];
 
   for (const table of tables) {
@@ -13,9 +29,13 @@ export function exportSQL(
     const cols = table.columns.map((col) => {
       const parts: string[] = [dialect.formatColumnName(col.name)];
 
-      parts.push(dialect.mapType(col));
+      if (isNative) {
+        parts.push(dialect.formatType(col));
+      } else {
+        parts.push(dialect.mapType(col));
+      }
 
-      if (col.type === 'SERIAL') {
+      if (isAutoIncrementType(col.type, projectDialect)) {
         const autoInc = dialect.formatAutoIncrement(col);
         if (autoInc) parts.push(autoInc);
       }

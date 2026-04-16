@@ -51,8 +51,8 @@ export function useKeyboardShortcuts({ onSearchOpen }: KeyboardShortcutsOptions)
           }
           case 's': {
             e.preventDefault();
-            const { tables, relations, schemaName } = useSchemaStore.getState();
-            const json = exportJSON(tables, relations, schemaName);
+            const { tables, relations, schemaName, dialect } = useSchemaStore.getState();
+            const json = exportJSON(tables, relations, schemaName, dialect);
             downloadText(json, `${schemaName}.tabloid.json`, 'application/json');
             toast(`Saved ${schemaName}.tabloid.json`);
             break;
@@ -69,10 +69,10 @@ export function useKeyboardShortcuts({ onSearchOpen }: KeyboardShortcutsOptions)
               reader.onload = () => {
                 try {
                   saveCurrentSchema();
-                  const { tables, relations, name } = importJSON(reader.result as string);
+                  const { tables, relations, name, dialect } = importJSON(reader.result as string);
                   const existingNames = getRecentList().map((entry) => entry.name);
                   const safeName = dedupName(name, existingNames);
-                  useSchemaStore.getState().loadSchema(tables, relations, safeName);
+                  useSchemaStore.getState().loadSchema(tables, relations, safeName, dialect);
                   fitView({ padding: 0.2, duration: 300 });
                   toast('Previous schema available in recents');
                 } catch (err) {

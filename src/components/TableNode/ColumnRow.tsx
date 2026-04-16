@@ -1,13 +1,14 @@
-import { memo, useCallback, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useSchemaStore } from '@/store/useSchemaStore';
 import { useInlineEdit } from '@/hooks/useInlineEdit';
-import { COLUMN_TYPES } from '@/types/schema';
-import type { Column, ColumnType } from '@/types/schema';
+import type { Column } from '@/types/schema';
+import { getCatalogForDialect } from '@/dialects';
 import { GripVertical, KeyRound, MessageSquare } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { useColumnHighlight } from '@/hooks/useHighlight';
+import TypePicker from './TypePicker';
 
 interface ColumnRowProps {
   tableId: string;
@@ -37,6 +38,8 @@ const ColumnRow = memo(function ColumnRow({
   const {
     updateColumnName,
     updateColumnType,
+    updateColumnLength,
+    updateColumnPrecision,
     updateColumnDescription,
     toggleColumnPrimaryKey,
     toggleColumnNullable,
@@ -46,12 +49,21 @@ const ColumnRow = memo(function ColumnRow({
     useShallow((s) => ({
       updateColumnName: s.updateColumnName,
       updateColumnType: s.updateColumnType,
+      updateColumnLength: s.updateColumnLength,
+      updateColumnPrecision: s.updateColumnPrecision,
       updateColumnDescription: s.updateColumnDescription,
       toggleColumnPrimaryKey: s.toggleColumnPrimaryKey,
       toggleColumnNullable: s.toggleColumnNullable,
       toggleColumnUnique: s.toggleColumnUnique,
       removeColumn: s.removeColumn,
     })),
+  );
+
+  const dialect = useSchemaStore((s) => s.dialect);
+  const catalog = useMemo(() => getCatalogForDialect(dialect), [dialect]);
+  const typeDef = useMemo(
+    () => catalog.find((t) => t.name === column.type),
+    [catalog, column.type],
   );
 
   const [descOpen, setDescOpen] = useState(false);
@@ -142,7 +154,7 @@ const ColumnRow = memo(function ColumnRow({
           <TooltipContent side="top" className="flex flex-col gap-1 max-w-none">
             <span className="font-medium whitespace-nowrap">{column.name}</span>
             <span className="flex items-center gap-1.5">
-              <span className="text-background/70">{column.type}{column.type === 'DECIMAL' && column.precision != null && `(${column.precision}${column.scale != null ? `,${column.scale}` : ''})`}</span>
+              <span className="text-background/70">{column.type}{column.length != null ? `(${column.length})` : ''}{column.precision != null ? `(${column.precision}${column.scale != null ? `,${column.scale}` : ''})` : ''}</span>
               {column.isPrimaryKey && <span className="rounded bg-amber-500/20 px-1 text-amber-400 dark:text-amber-700">PK</span>}
               {!column.isNullable && <span className="rounded bg-rose-500/20 px-1 text-rose-400 dark:text-rose-700">NN</span>}
               {column.isUnique && <span className="rounded bg-violet-500/20 px-1 text-violet-400 dark:text-violet-700">UQ</span>}
@@ -192,20 +204,66 @@ const ColumnRow = memo(function ColumnRow({
         </PopoverContent>
       </Popover>
 
-      <select
-        className="nowheel w-[90px] shrink-0 rounded border border-input bg-transparent px-0.5 text-xs text-muted-foreground"
+      <TypePicker
         value={column.type}
-        onChange={(e) =>
-          updateColumnType(tableId, column.id, e.target.value as ColumnType)
-        }
-        data-testid={`column-type-${column.id}`}
-      >
-        {COLUMN_TYPES.map((t) => (
-          <option key={t} value={t}>
-            {t}
-          </option>
-        ))}
-      </select>
+        onChange={(type) => {
+          updateColumnType(tableId, column.id, type);
+          // Clear params when switching types
+          const newDef = catalog.find((t) => t.name === type);
+          if (!newDef?.hasLength && column.length != null) {
+            updateColumnLength(tableId, column.id, undefined);
+          }
+          if (!newDef?.hasPrecision && column.precision != null) {
+            updateColumnPrecision(tableId, column.id, undefined, undefined);
+          }
+        }}
+        columnId={column.id}
+      />
+      {typeDef?.hasLength && (
+        <input
+          className="nowheel w-10 shrink-0 rounded border border-input bg-transparent px-1 text-center text-xs text-muted-foreground"
+          type="number"
+          min={1}
+          placeholder="n"
+          value={column.length ?? ''}
+          onChange={(e) => {
+            const v = e.target.value ? parseInt(e.target.value, 10) : undefined;
+            updateColumnLength(tableId, column.id, v && v > 0 ? v : undefined);
+          }}
+          title="Length"
+          data-testid={`column-length-${column.id}`}
+        />
+      )}
+      {typeDef?.hasPrecision && (
+        <>
+          <input
+            className="nowheel w-10 shrink-0 rounded border border-input bg-transparent px-1 text-center text-xs text-muted-foreground"
+            type="number"
+            min={1}
+            placeholder="p"
+            value={column.precision ?? ''}
+            onChange={(e) => {
+              const v = e.target.value ? parseInt(e.target.value, 10) : undefined;
+              updateColumnPrecision(tableId, column.id, v && v > 0 ? v : undefined, column.scale);
+            }}
+            title="Precision"
+            data-testid={`column-precision-${column.id}`}
+          />
+          <input
+            className="nowheel w-10 shrink-0 rounded border border-input bg-transparent px-1 text-center text-xs text-muted-foreground"
+            type="number"
+            min={0}
+            placeholder="s"
+            value={column.scale ?? ''}
+            onChange={(e) => {
+              const v = e.target.value ? parseInt(e.target.value, 10) : undefined;
+              updateColumnPrecision(tableId, column.id, column.precision, v != null && v >= 0 ? v : undefined);
+            }}
+            title="Scale"
+            data-testid={`column-scale-${column.id}`}
+          />
+        </>
+      )}
 
       <button
         className={`shrink-0 text-xs transition-colors duration-150 ${

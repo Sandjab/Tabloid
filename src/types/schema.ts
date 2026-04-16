@@ -1,7 +1,10 @@
 import type { Node, Edge } from '@xyflow/react';
 
-// --- Column Types (abstract, SGBD-agnostic) ---
+// --- Column Types ---
 
+// Abstract types used by the "generic" dialect (SGBD-agnostic).
+// When the project dialect is set to a specific SGBD, Column.type stores
+// native type names instead (e.g. "VARCHAR", "JSONB", "BIGSERIAL").
 export type ColumnType =
   | 'TEXT'
   | 'INTEGER'
@@ -35,17 +38,22 @@ export const COLUMN_TYPES: ColumnType[] = [
   'SERIAL',
 ];
 
+// --- Dialect identifiers ---
+
+export type DialectId = 'generic' | 'postgresql' | 'mysql' | 'sqlite' | 'oracle' | 'sqlserver';
+
 // --- Column ---
 
 export interface Column {
   id: string;
   name: string;
-  type: ColumnType;
+  type: string;
   isPrimaryKey: boolean;
   isNullable: boolean;
   isUnique: boolean;
   defaultValue?: string;
   description?: string;
+  length?: number;
   precision?: number;
   scale?: number;
 }
@@ -121,6 +129,7 @@ export type RelationEdge = Edge;
 
 export interface Schema {
   version: number;
+  dialect: DialectId;
   name: string;
   tables: Table[];
   relations: Relation[];

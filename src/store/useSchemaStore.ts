@@ -11,7 +11,7 @@ import {
 import type {
   Table,
   Column,
-  ColumnType,
+  DialectId,
   Index,
   Relation,
   RelationType,
@@ -21,15 +21,35 @@ import type {
 import { DEFAULT_SOURCE_SIDE, DEFAULT_TARGET_SIDE } from '@/types/schema';
 import { createTableId, createColumnId, createRelationId, makeEdgeHandleId } from '@/utils/id';
 import { nextAvailableName } from '@/utils/naming';
+import { getCatalogForDialect } from '@/dialects';
+
+function getDefaultPkType(dialect: DialectId): string {
+  const catalog = getCatalogForDialect(dialect);
+  // Look for SERIAL, BIGSERIAL, or first integer type
+  const serial = catalog.find((t) => t.name === 'SERIAL');
+  if (serial) return serial.name;
+  const integer = catalog.find((t) => t.family === 'integer');
+  return integer?.name ?? 'INTEGER';
+}
+
+function getDefaultColumnType(dialect: DialectId): string {
+  const catalog = getCatalogForDialect(dialect);
+  const text = catalog.find((t) => t.name === 'TEXT');
+  if (text) return text.name;
+  const textFamily = catalog.find((t) => t.family === 'text');
+  return textFamily?.name ?? 'TEXT';
+}
 
 // --- Store interface ---
 
 export interface SchemaState {
+  dialect: DialectId;
   tables: Table[];
   relations: Relation[];
   nodes: Node<TableNodeData>[];
   edges: Edge[];
   schemaName: string;
+  setDialect: (dialect: DialectId) => void;
   setSchemaName: (name: string) => void;
 
   onNodesChange: (changes: NodeChange[]) => void;
@@ -43,7 +63,7 @@ export interface SchemaState {
   removeColumn: (tableId: string, columnId: string) => void;
   moveColumn: (tableId: string, fromIndex: number, toIndex: number) => void;
   updateColumnName: (tableId: string, columnId: string, name: string) => void;
-  updateColumnType: (tableId: string, columnId: string, type: ColumnType) => void;
+  updateColumnType: (tableId: string, columnId: string, type: string) => void;
   toggleColumnPrimaryKey: (tableId: string, columnId: string) => void;
   toggleColumnNullable: (tableId: string, columnId: string) => void;
   toggleColumnUnique: (tableId: string, columnId: string) => void;
@@ -71,7 +91,9 @@ export interface SchemaState {
 
   duplicateTable: (tableId: string) => string;
   updateTablePositions: (positions: Map<string, { x: number; y: number }>) => void;
-  loadSchema: (tables: Table[], relations: Relation[], name?: string) => void;
+  updateColumnLength: (tableId: string, columnId: string, length: number | undefined) => void;
+  updateColumnPrecision: (tableId: string, columnId: string, precision: number | undefined, scale: number | undefined) => void;
+  loadSchema: (tables: Table[], relations: Relation[], name?: string, dialect?: DialectId) => void;
   rebuildNodesFromTables: () => void;
 }
 
@@ -210,11 +232,16 @@ function buildNodesFromTables(tables: Table[]): Node<TableNodeData>[] {
 export const useSchemaStore = create<SchemaState>()(
   temporal(
     (set, get) => ({
+      dialect: 'generic' as DialectId,
       tables: [],
       relations: [],
       nodes: [],
       edges: [],
       schemaName: 'Untitled',
+
+      setDialect: (dialect) => {
+        set({ dialect });
+      },
 
       onNodesChange: (changes: NodeChange[]) => {
         // Handle node removals by syncing tables and relations
@@ -283,12 +310,13 @@ export const useSchemaStore = create<SchemaState>()(
 
       addTable: (position) => {
         const id = createTableId();
-        const existingNames = get().tables.map((t) => t.name);
+        const { tables, dialect } = get();
+        const existingNames = tables.map((t) => t.name);
         const tableName = nextAvailableName('table_', existingNames);
         const defaultColumn: Column = {
           id: createColumnId(),
           name: 'id',
-          type: 'SERIAL',
+          type: getDefaultPkType(dialect),
           isPrimaryKey: true,
           isNullable: false,
           isUnique: false,
@@ -344,7 +372,7 @@ export const useSchemaStore = create<SchemaState>()(
           const newCol: Column = {
             id: createColumnId(),
             name: colName,
-            type: 'TEXT',
+            type: getDefaultColumnType(state.dialect),
             isPrimaryKey: false,
             isNullable: true,
             isUnique: false,
@@ -457,6 +485,29 @@ export const useSchemaStore = create<SchemaState>()(
         );
       },
 
+      updateColumnLength: (tableId, columnId, length) => {
+        set((state) =>
+          updateTableInState(state.tables, state.nodes, tableId, (t) =>
+            updateColumnInTable(t, columnId, (c) => ({
+              ...c,
+              length,
+            })),
+          ),
+        );
+      },
+
+      updateColumnPrecision: (tableId, columnId, precision, scale) => {
+        set((state) =>
+          updateTableInState(state.tables, state.nodes, tableId, (t) =>
+            updateColumnInTable(t, columnId, (c) => ({
+              ...c,
+              precision,
+              scale,
+            })),
+          ),
+        );
+      },
+
       addRelation: (sourceTableId, sourceColumnId, targetTableId, targetColumnId, type, sourceSide, targetSide) => {
         const id = createRelationId();
         const relation: Relation = {
@@ -535,7 +586,7 @@ export const useSchemaStore = create<SchemaState>()(
           const pkCol: Column = {
             id: createColumnId(),
             name: 'id',
-            type: 'SERIAL',
+            type: getDefaultPkType(get().dialect),
             isPrimaryKey: true,
             isNullable: false,
             isUnique: false,
@@ -724,8 +775,9 @@ export const useSchemaStore = create<SchemaState>()(
         });
       },
 
-      loadSchema: (tables, relations, name) => {
+      loadSchema: (tables, relations, name, dialect) => {
         set({
+          dialect: dialect ?? 'generic',
           schemaName: name ?? 'Untitled',
           tables,
           relations,

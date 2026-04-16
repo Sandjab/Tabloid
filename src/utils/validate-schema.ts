@@ -1,9 +1,16 @@
-import type { Table, Relation, ColumnType } from '@/types/schema';
+import type { Table, Relation, DialectId } from '@/types/schema';
+import type { NativeTypeDefinition } from '@/dialects/types';
+import { getCatalogForDialect } from '@/dialects';
 
-function areTypesCompatible(a: ColumnType, b: ColumnType): boolean {
+function areTypesCompatible(
+  a: string,
+  b: string,
+  catalog: NativeTypeDefinition[],
+): boolean {
   if (a === b) return true;
-  const normalize = (t: ColumnType): ColumnType => (t === 'SERIAL' ? 'INTEGER' : t);
-  return normalize(a) === normalize(b);
+  const familyA = catalog.find((t) => t.name === a)?.family;
+  const familyB = catalog.find((t) => t.name === b)?.family;
+  return familyA != null && familyA === familyB;
 }
 
 export interface ValidationWarning {
@@ -25,9 +32,11 @@ export interface ValidationWarning {
 export function validateSchema(
   tables: Table[],
   relations: Relation[],
+  dialectId: DialectId = 'generic',
 ): ValidationWarning[] {
   const warnings: ValidationWarning[] = [];
-  const columnMap = new Map<string, { tableId: string; type: ColumnType }>();
+  const catalog = getCatalogForDialect(dialectId);
+  const columnMap = new Map<string, { tableId: string; type: string }>();
 
   // Duplicate table names
   const tableNames = new Map<string, string>();
@@ -112,7 +121,7 @@ export function validateSchema(
       continue;
     }
 
-    if (!areTypesCompatible(src.type, tgt.type)) {
+    if (!areTypesCompatible(src.type, tgt.type, catalog)) {
       const srcTable = tables.find((t) => t.id === rel.sourceTableId);
       const tgtTable = tables.find((t) => t.id === rel.targetTableId);
       warnings.push({

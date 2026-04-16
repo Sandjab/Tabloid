@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useSchemaStore } from '@/store/useSchemaStore';
 import { exportJSON } from '@/utils/export-json';
 import { importJSON } from '@/utils/import-json';
-import type { Table, Relation } from '@/types/schema';
+import type { Table, Relation, DialectId } from '@/types/schema';
 
 const RECENT_KEY = 'tabloid-recent';
 const SCHEMA_PREFIX = 'tabloid-schema-';
@@ -39,23 +39,23 @@ function removeRecentEntry(name: string): void {
   saveRecentList(list);
 }
 
-function saveSchema(name: string, tables: Table[], relations: Relation[]): void {
-  const json = exportJSON(tables, relations, name);
+function saveSchema(name: string, tables: Table[], relations: Relation[], dialect: DialectId = 'generic'): void {
+  const json = exportJSON(tables, relations, name, dialect);
   localStorage.setItem(SCHEMA_PREFIX + name, json);
   updateRecentEntry(name, tables.length);
 }
 
 export function saveCurrentSchema(): void {
-  const { schemaName, tables, relations } = useSchemaStore.getState();
-  saveSchema(schemaName, tables, relations);
+  const { schemaName, tables, relations, dialect } = useSchemaStore.getState();
+  saveSchema(schemaName, tables, relations, dialect);
 }
 
 export function loadSchemaByName(name: string): boolean {
   const raw = localStorage.getItem(SCHEMA_PREFIX + name);
   if (!raw) return false;
   try {
-    const { tables, relations, name: importedName } = importJSON(raw);
-    useSchemaStore.getState().loadSchema(tables, relations, importedName || name);
+    const { tables, relations, name: importedName, dialect } = importJSON(raw);
+    useSchemaStore.getState().loadSchema(tables, relations, importedName || name, dialect);
     return true;
   } catch {
     return false;
@@ -84,9 +84,9 @@ export function loadFromLocalStorage(): boolean {
   const oldRaw = localStorage.getItem(OLD_KEY);
   if (oldRaw) {
     try {
-      const { tables, relations } = importJSON(oldRaw);
-      useSchemaStore.getState().loadSchema(tables, relations, 'Untitled');
-      saveSchema('Untitled', tables, relations);
+      const { tables, relations, dialect } = importJSON(oldRaw);
+      useSchemaStore.getState().loadSchema(tables, relations, 'Untitled', dialect);
+      saveSchema('Untitled', tables, relations, dialect);
       localStorage.removeItem(OLD_KEY);
       return true;
     } catch {
@@ -104,10 +104,11 @@ export function loadFromLocalStorage(): boolean {
 
 export function useAutoSave() {
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const prevRef = useRef<{ tables: unknown; relations: unknown; schemaName: unknown }>({
+  const prevRef = useRef<{ tables: unknown; relations: unknown; schemaName: unknown; dialect: unknown }>({
     tables: null,
     relations: null,
     schemaName: null,
+    dialect: null,
   });
 
   useEffect(() => {
@@ -115,15 +116,16 @@ export function useAutoSave() {
       if (
         state.tables === prevRef.current.tables &&
         state.relations === prevRef.current.relations &&
-        state.schemaName === prevRef.current.schemaName
+        state.schemaName === prevRef.current.schemaName &&
+        state.dialect === prevRef.current.dialect
       ) {
         return;
       }
-      prevRef.current = { tables: state.tables, relations: state.relations, schemaName: state.schemaName };
+      prevRef.current = { tables: state.tables, relations: state.relations, schemaName: state.schemaName, dialect: state.dialect };
 
       clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
-        saveSchema(state.schemaName, state.tables, state.relations);
+        saveSchema(state.schemaName, state.tables, state.relations, state.dialect);
       }, DEBOUNCE_MS);
     });
     return () => {

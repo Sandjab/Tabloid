@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useSchemaStore } from '@/store/useSchemaStore';
 import { validateSchema } from '@/utils/validate-schema';
-import { DIALECTS, DIALECT_NAMES } from '@/dialects';
+import { DIALECTS, DIALECT_NAMES, DIALECT_DISPLAY_NAMES } from '@/dialects';
 import { exportSQL } from '@/utils/export-sql';
 import { exportYAML } from '@/utils/export-yaml';
 import { exportMermaid } from '@/utils/export-mermaid';
@@ -44,22 +44,27 @@ interface ExportDialogProps {
 
 export default function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
   const [format, setFormat] = useState<ExportFormat>('sql');
-  const [dialect, setDialect] = useState('postgresql');
+  const [exportDialect, setExportDialect] = useState('postgresql');
 
   const tables = useSchemaStore((s) => s.tables);
   const relations = useSchemaStore((s) => s.relations);
   const schemaName = useSchemaStore((s) => s.schemaName);
+  const projectDialect = useSchemaStore((s) => s.dialect);
 
-  const validationIssues = useMemo(() => validateSchema(tables, relations), [tables, relations]);
+  const isNative = projectDialect !== 'generic';
+  // In native mode, export uses the project dialect; in generic mode, user picks
+  const effectiveDialect = isNative ? projectDialect : exportDialect;
+
+  const validationIssues = useMemo(() => validateSchema(tables, relations, projectDialect), [tables, relations, projectDialect]);
   const hasIssues = validationIssues.length > 0;
   const exportBlocked = hasIssues;
 
   const preview = useMemo(() => {
     switch (format) {
       case 'sql':
-        return exportSQL(tables, relations, DIALECTS[dialect]);
+        return exportSQL(tables, relations, DIALECTS[effectiveDialect], projectDialect);
       case 'yaml':
-        return exportYAML(tables, relations, schemaName);
+        return exportYAML(tables, relations, schemaName, projectDialect);
       case 'mermaid':
         return exportMermaid(tables, relations);
       case 'dbml':
@@ -70,7 +75,7 @@ export default function ExportDialog({ open, onOpenChange }: ExportDialogProps) 
       case 'svg':
         return `(${format.toUpperCase()} will be exported as an image file)`;
     }
-  }, [format, dialect, tables, relations, schemaName]);
+  }, [format, effectiveDialect, projectDialect, tables, relations, schemaName]);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(preview);
@@ -127,10 +132,10 @@ export default function ExportDialog({ open, onOpenChange }: ExportDialogProps) 
               </Button>
             ))}
           </div>
-          {format === 'sql' && (
+          {format === 'sql' && !isNative && (
             <Select
-              value={dialect}
-              onValueChange={(val) => { if (val) setDialect(val); }}
+              value={exportDialect}
+              onValueChange={(val) => { if (val) setExportDialect(val); }}
             >
               <SelectTrigger
                 size="sm"
@@ -141,11 +146,16 @@ export default function ExportDialog({ open, onOpenChange }: ExportDialogProps) 
               <SelectContent>
                 {DIALECT_NAMES.map((d) => (
                   <SelectItem key={d} value={d}>
-                    {d.charAt(0).toUpperCase() + d.slice(1)}
+                    {DIALECT_DISPLAY_NAMES[d as import('@/types/schema').DialectId] ?? d}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+          )}
+          {format === 'sql' && isNative && (
+            <span className="flex items-center gap-1.5 rounded-md border border-input px-2 py-1 text-xs text-muted-foreground" data-testid="export-dialect-label">
+              {DIALECT_DISPLAY_NAMES[projectDialect]}
+            </span>
           )}
         </div>
 
