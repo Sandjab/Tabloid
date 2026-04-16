@@ -59,11 +59,15 @@ function classifyNaming(name: string): 'snake' | 'camel' | 'pascal' | 'other' {
   return 'other';
 }
 
-// Tarjan-style back-edge detection over the FK graph. Returns the set of
-// relation ids that participate in a cycle. Self-references are ignored.
+// DFS back-edge detection over the FK graph. Returns the set of relation ids
+// that participate in a cycle. Self-references are ignored. When a back-edge
+// closes a cycle, only the relations between the cycle's entry-point and the
+// back-edge (not the entire DFS path that led there) are flagged.
 function detectCycleRelations(relations: Relation[]): Set<string> {
   const adj = new Map<string, Array<{ targetTableId: string; relId: string }>>();
+  const relById = new Map<string, Relation>();
   for (const rel of relations) {
+    relById.set(rel.id, rel);
     if (rel.sourceTableId === rel.targetTableId) continue;
     const list = adj.get(rel.sourceTableId) ?? [];
     list.push({ targetTableId: rel.targetTableId, relId: rel.id });
@@ -80,9 +84,17 @@ function detectCycleRelations(relations: Relation[]): Set<string> {
     for (const edge of adj.get(node) ?? []) {
       const childState = state.get(edge.targetTableId);
       if (childState === VISITING) {
-        // Back-edge closes a cycle; flag this edge + every one on the current path
+        // Back-edge closes a cycle. Flag only the path segment that starts at
+        // the cycle's entry-point (the node the back-edge points to).
         cycleRelIds.add(edge.relId);
-        for (const r of pathRels) cycleRelIds.add(r);
+        const cycleStart = pathRels.findIndex(
+          (rId) => relById.get(rId)?.sourceTableId === edge.targetTableId,
+        );
+        if (cycleStart !== -1) {
+          for (let i = cycleStart; i < pathRels.length; i++) {
+            cycleRelIds.add(pathRels[i]);
+          }
+        }
       } else if (childState !== VISITED) {
         pathRels.push(edge.relId);
         dfs(edge.targetTableId, pathRels);
@@ -151,9 +163,12 @@ export function validateSchema(
       });
     }
 
+    // Column name duplication is case-insensitive — matches the table-name
+    // check above and how unquoted SQL identifiers collide in practice.
     const colNames = new Set<string>();
     for (const col of table.columns) {
-      if (colNames.has(col.name)) {
+      const lowerName = col.name.toLowerCase();
+      if (colNames.has(lowerName)) {
         warnings.push({
           type: 'duplicate-column-name',
           severity: 'error',
@@ -162,7 +177,7 @@ export function validateSchema(
           message: `Table "${table.name}" has duplicate column name "${col.name}"`,
         });
       }
-      colNames.add(col.name);
+      colNames.add(lowerName);
       columnMap.set(col.id, { tableId: table.id, type: col.type });
 
       if (COMMON_RESERVED_WORDS.has(col.name.toLowerCase())) {

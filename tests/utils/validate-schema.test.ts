@@ -269,4 +269,46 @@ describe('validateSchema', () => {
     const warnings = validateSchema(tables, []);
     expect(warnings.some((w) => w.type === 'naming-inconsistency')).toBe(false);
   });
+
+  // --- Review-driven fixes ---
+
+  it('cycle detection flags only relations on the actual cycle, not the approach path', () => {
+    // Graph: A -> B -> C -> D -> B  (cycle is B→C→D→B; A→B is NOT in the cycle)
+    const tables: Table[] = ['a', 'b', 'c', 'd'].map((name) => ({
+      id: name,
+      name,
+      columns: [
+        { id: `${name}-id`, name: 'id', type: 'SERIAL', isPrimaryKey: true, isNullable: false, isUnique: false },
+        { id: `${name}-ref`, name: 'ref', type: 'SERIAL', isPrimaryKey: false, isNullable: false, isUnique: false },
+      ],
+      position: { x: 0, y: 0 },
+    }));
+    const relations: Relation[] = [
+      { id: 'rAB', sourceTableId: 'a', sourceColumnId: 'a-ref', targetTableId: 'b', targetColumnId: 'b-id', type: 'many-to-one' },
+      { id: 'rBC', sourceTableId: 'b', sourceColumnId: 'b-ref', targetTableId: 'c', targetColumnId: 'c-id', type: 'many-to-one' },
+      { id: 'rCD', sourceTableId: 'c', sourceColumnId: 'c-ref', targetTableId: 'd', targetColumnId: 'd-id', type: 'many-to-one' },
+      { id: 'rDB', sourceTableId: 'd', sourceColumnId: 'd-ref', targetTableId: 'b', targetColumnId: 'b-id', type: 'many-to-one' },
+    ];
+    const warnings = validateSchema(tables, relations);
+    const cycleIssues = warnings.filter((w) => w.type === 'fk-cycle');
+    const flaggedRels = new Set(cycleIssues.map((w) => w.columnId));
+
+    // B→C, C→D, D→B should be flagged (via their sourceColumnIds)
+    expect(flaggedRels.has('b-ref')).toBe(true);
+    expect(flaggedRels.has('c-ref')).toBe(true);
+    expect(flaggedRels.has('d-ref')).toBe(true);
+    // A→B is on the approach path, NOT in the cycle
+    expect(flaggedRels.has('a-ref')).toBe(false);
+  });
+
+  it('flags case-insensitive duplicate column names', () => {
+    const tables = [makeTable('t1', {
+      columns: [
+        { id: 'c1', name: 'Email', type: 'TEXT', isPrimaryKey: false, isNullable: true, isUnique: false },
+        { id: 'c2', name: 'email', type: 'TEXT', isPrimaryKey: false, isNullable: true, isUnique: false },
+      ],
+    })];
+    const warnings = validateSchema(tables, []);
+    expect(warnings.some((w) => w.type === 'duplicate-column-name')).toBe(true);
+  });
 });
