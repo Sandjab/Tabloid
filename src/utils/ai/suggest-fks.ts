@@ -45,9 +45,7 @@ function normalize(name: string): string {
 }
 
 function namesMatch(a: string, b: string): boolean {
-  const na = normalize(a);
-  const nb = normalize(b);
-  return na === nb || na === normalize(b) || nb === normalize(a);
+  return normalize(a) === normalize(b);
 }
 
 export function suggestForeignKeys(tables: Table[], relations: Relation[]): FkSuggestion[] {

@@ -20,14 +20,23 @@ export function getClient(apiKey: string): Anthropic {
   });
 }
 
-// Extracts a JSON object/array from a Claude response. Claude sometimes wraps
-// JSON in markdown fences even when asked not to; strip those before parsing.
+// Extracts a JSON object/array from a Claude response. First tries the whole
+// trimmed text (the common case when the model cleanly emits JSON), strips
+// markdown fences if present, then falls back to grabbing the first {...} or
+// [...] block anywhere in the text — which handles the case where the model
+// prefixes a short preamble despite the system prompt.
 export function extractJson<T = unknown>(text: string): T {
   let trimmed = text.trim();
   if (trimmed.startsWith('```')) {
-    trimmed = trimmed.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+    trimmed = trimmed.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
   }
-  return JSON.parse(trimmed) as T;
+  try {
+    return JSON.parse(trimmed) as T;
+  } catch {
+    const match = trimmed.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+    if (!match) throw new Error('No JSON object or array found in response');
+    return JSON.parse(match[0]) as T;
+  }
 }
 
 // Extracts plain text from a Messages API response.
