@@ -252,18 +252,25 @@ export async function exportPNG(filename = 'schema.png'): Promise<void> {
   }
 }
 
-export async function exportSVG(filename = 'schema.svg'): Promise<void> {
+// Returns the SVG data URL of the current canvas, or null if the canvas is
+// empty. Used by exportSVG to download, and by exportHTML to embed inline.
+export async function renderSvgDataUrl(): Promise<string | null> {
   const { nodes } = useSchemaStore.getState();
-  if (nodes.length === 0) return;
+  if (nodes.length === 0) return null;
 
   const bounds = getNodesBounds(nodes);
   const el = getViewportElement();
 
   injectPrintMode();
   try {
-    const dataUrl = await toSvg(el, computeExportOptions(bounds));
-    downloadDataUrl(dataUrl, filename);
+    return await toSvg(el, computeExportOptions(bounds));
   } finally {
     removePrintMode();
   }
+}
+
+export async function exportSVG(filename = 'schema.svg'): Promise<void> {
+  const dataUrl = await renderSvgDataUrl();
+  if (!dataUrl) return;
+  downloadDataUrl(dataUrl, filename);
 }

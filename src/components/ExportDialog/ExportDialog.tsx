@@ -7,7 +7,8 @@ import { exportYAML } from '@/utils/export-yaml';
 import { exportMermaid } from '@/utils/export-mermaid';
 import { exportDBML } from '@/utils/export-dbml';
 import { exportExcalidraw } from '@/utils/export-excalidraw';
-import { exportPNG, exportSVG } from '@/utils/export-image';
+import { exportPNG, exportSVG, renderSvgDataUrl } from '@/utils/export-image';
+import { exportHTML } from '@/utils/export-html';
 import { downloadText } from '@/utils/download';
 import {
   Dialog,
@@ -25,7 +26,7 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 
-type ExportFormat = 'sql' | 'yaml' | 'mermaid' | 'dbml' | 'excalidraw' | 'png' | 'svg';
+type ExportFormat = 'sql' | 'yaml' | 'mermaid' | 'dbml' | 'excalidraw' | 'html' | 'png' | 'svg';
 
 const FORMATS: { value: ExportFormat; label: string }[] = [
   { value: 'sql', label: 'SQL' },
@@ -33,6 +34,7 @@ const FORMATS: { value: ExportFormat; label: string }[] = [
   { value: 'mermaid', label: 'Mermaid' },
   { value: 'dbml', label: 'DBML' },
   { value: 'excalidraw', label: 'Excalidraw' },
+  { value: 'html', label: 'HTML Doc' },
   { value: 'png', label: 'PNG Image' },
   { value: 'svg', label: 'SVG Image' },
 ];
@@ -71,6 +73,11 @@ export default function ExportDialog({ open, onOpenChange }: ExportDialogProps) 
         return exportDBML(tables, relations);
       case 'excalidraw':
         return exportExcalidraw(tables, relations);
+      case 'html':
+        // Preview shows the HTML source without the embedded SVG (rendered
+        // only at download time since it's async). The diagram shows up in
+        // the downloaded file.
+        return exportHTML({ tables, relations, schemaName, dialect: projectDialect });
       case 'png':
       case 'svg':
         return `(${format.toUpperCase()} will be exported as an image file)`;
@@ -98,6 +105,19 @@ export default function ExportDialog({ open, onOpenChange }: ExportDialogProps) 
       case 'excalidraw':
         downloadText(preview, `${schemaName}.excalidraw`, 'application/json');
         break;
+      case 'html': {
+        // Render the canvas SVG and inline it so the downloaded file is self-contained.
+        const svgDataUrl = await renderSvgDataUrl().catch(() => null);
+        const fullHtml = exportHTML({
+          tables,
+          relations,
+          schemaName,
+          dialect: projectDialect,
+          svgDataUrl,
+        });
+        downloadText(fullHtml, `${schemaName}.html`, 'text/html');
+        break;
+      }
       case 'png':
         await exportPNG(`${schemaName}.png`);
         break;
