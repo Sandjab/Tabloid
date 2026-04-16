@@ -45,7 +45,9 @@ export default function IndexDialog({
     return colNames.length > 0 ? `idx_${colNames.join('_')}` : '';
   }, [selectedIds, columns]);
 
-  const name = nameOverride ?? autoName;
+  // `||` (not `??`) so clearing the field falls back to the auto-generated
+  // name — a common UX pattern for suggested inputs.
+  const name = nameOverride || autoName;
 
   const toggleColumn = (colId: string) => {
     setSelectedIds((prev) =>

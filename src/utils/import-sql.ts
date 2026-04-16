@@ -326,7 +326,7 @@ export function parseSQL(sql: string): ImportResult {
 
       // Regular word
       let tok = '';
-      while (i < text.length && !/[\s,()'"` [\]]/.test(text[i])) {
+      while (i < text.length && !/[\s,()'"`[\]]/.test(text[i])) {
         tok += text[i]; i++;
       }
       // Check if next non-space char is '(' → attach it (for types like DECIMAL(10,2))
