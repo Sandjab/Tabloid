@@ -233,6 +233,99 @@ describe('exportMigration — indexes', () => {
   });
 });
 
+describe('exportMigration — column descriptions', () => {
+  const baseTable: Table = table({
+    id: 't1',
+    name: 'users',
+    columns: [col({ id: 'c1', name: 'id', type: 'SERIAL', isPrimaryKey: true })],
+  });
+
+  it('postgresql: emits COMMENT ON COLUMN after ADD COLUMN with description', () => {
+    const current: Table = { ...baseTable, columns: [
+      ...baseTable.columns,
+      col({ id: 'c2', name: 'email', type: 'TEXT', description: 'Contact email' }),
+    ] };
+    const sql = migrate({ tables: [baseTable], relations: [] }, { tables: [current], relations: [] }, 'postgresql');
+    expect(sql).toMatch(/ADD COLUMN "email"/);
+    expect(sql).toMatch(/COMMENT ON COLUMN "users"\."email" IS 'Contact email'/);
+  });
+
+  it('oracle: emits COMMENT ON COLUMN after ADD COLUMN with description', () => {
+    const current: Table = { ...baseTable, columns: [
+      ...baseTable.columns,
+      col({ id: 'c2', name: 'email', type: 'TEXT', description: 'Contact email' }),
+    ] };
+    const sql = migrate({ tables: [baseTable], relations: [] }, { tables: [current], relations: [] }, 'oracle');
+    expect(sql).toMatch(/COMMENT ON COLUMN "users"\."email" IS 'Contact email'/);
+  });
+
+  it('mysql: includes COMMENT inline in ADD COLUMN', () => {
+    const current: Table = { ...baseTable, columns: [
+      ...baseTable.columns,
+      col({ id: 'c2', name: 'email', type: 'TEXT', description: 'Contact email' }),
+    ] };
+    const sql = migrate({ tables: [baseTable], relations: [] }, { tables: [current], relations: [] }, 'mysql');
+    expect(sql).toMatch(/ADD COLUMN `email` TEXT COMMENT 'Contact email'/);
+    // No separate COMMENT statement for MySQL
+    expect(sql).not.toMatch(/COMMENT ON COLUMN/);
+  });
+
+  it('sqlserver: emits sp_addextendedproperty for added column description', () => {
+    const current: Table = { ...baseTable, columns: [
+      ...baseTable.columns,
+      col({ id: 'c2', name: 'email', type: 'TEXT', description: 'Contact email' }),
+    ] };
+    const sql = migrate({ tables: [baseTable], relations: [] }, { tables: [current], relations: [] }, 'sqlserver');
+    expect(sql).toMatch(/sp_addextendedproperty/);
+    expect(sql).toMatch(/'Contact email'/);
+  });
+
+  it('mysql: MODIFY on type change preserves existing comment', () => {
+    const b: SchemaSnapshot = {
+      tables: [table({
+        id: 't1',
+        name: 'users',
+        columns: [col({ id: 'c1', name: 'age', type: 'INTEGER', description: 'User age' })],
+      })],
+      relations: [],
+    };
+    const c: SchemaSnapshot = {
+      tables: [table({
+        id: 't1',
+        name: 'users',
+        columns: [col({ id: 'c1', name: 'age', type: 'BIGINT', description: 'User age' })],
+      })],
+      relations: [],
+    };
+    const sql = migrate(b, c, 'mysql');
+    // Single MODIFY statement that carries the comment, not two separate MODIFYs
+    const modifyMatches = sql.match(/MODIFY COLUMN/g) ?? [];
+    expect(modifyMatches.length).toBe(1);
+    expect(sql).toMatch(/MODIFY COLUMN `age` BIGINT COMMENT 'User age'/);
+  });
+
+  it('mysql: clearing description emits COMMENT \'\' to explicitly remove comment', () => {
+    const b: SchemaSnapshot = {
+      tables: [table({
+        id: 't1',
+        name: 'users',
+        columns: [col({ id: 'c1', name: 'age', type: 'INTEGER', description: 'User age' })],
+      })],
+      relations: [],
+    };
+    const c: SchemaSnapshot = {
+      tables: [table({
+        id: 't1',
+        name: 'users',
+        columns: [col({ id: 'c1', name: 'age', type: 'INTEGER' })],
+      })],
+      relations: [],
+    };
+    const sql = migrate(b, c, 'mysql');
+    expect(sql).toMatch(/MODIFY COLUMN `age` INTEGER COMMENT ''/);
+  });
+});
+
 describe('exportMigration — ordering and identity', () => {
   it('phase order: drop FK → drop index → drop col → drop table → rename → create → modify → add FK', () => {
     // Scenario: rename "users" to "customers", drop column, add column, drop one table, add another, FK flip.

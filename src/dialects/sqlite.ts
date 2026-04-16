@@ -95,4 +95,9 @@ export const sqlite: Dialect = {
   formatDropIndex(_tableName: string, indexName: string): string {
     return `DROP INDEX ${this.formatColumnName(indexName)};`;
   },
+
+  // SQLite has no column-comment syntax.
+  formatColumnComment(): string {
+    return '';
+  },
 };

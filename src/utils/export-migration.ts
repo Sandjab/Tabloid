@@ -89,9 +89,13 @@ export function exportMigration(
       }
     }
 
-    // 7b. ADD new columns
+    // 7b. ADD new columns (emit standalone comment for dialects that need it)
     for (const col of td.columns.added) {
       stmts.push(dialect.formatAddColumn(tableName, col));
+      if (col.description) {
+        const commentStmt = dialect.formatColumnComment(tableName, col.name, col.description);
+        if (commentStmt) stmts.push(commentStmt);
+      }
     }
 
     // 7c. ALTER existing columns (non-name changes)

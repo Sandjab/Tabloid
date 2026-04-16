@@ -83,7 +83,12 @@ export const mysql: Dialect = {
   },
 
   formatAddColumn(tableName: string, column: Column): string {
-    return `ALTER TABLE ${this.formatTableName(tableName)} ADD COLUMN ${columnDefinition(this, column)};`;
+    let stmt = `ALTER TABLE ${this.formatTableName(tableName)} ADD COLUMN ${columnDefinition(this, column)}`;
+    if (column.description) {
+      const esc = column.description.replace(/'/g, "''");
+      stmt += ` COMMENT '${esc}'`;
+    }
+    return `${stmt};`;
   },
   formatDropColumn(tableName: string, columnName: string): string {
     return `ALTER TABLE ${this.formatTableName(tableName)} DROP COLUMN ${this.formatColumnName(columnName)};`;
@@ -101,14 +106,20 @@ export const mysql: Dialect = {
     const t = this.formatTableName(tableName);
     const out: string[] = [];
 
-    const modifyFields: AlterableColumnField[] = ['type', 'nullable', 'default', 'precision', 'scale'];
-    const needsModify = changes.some((ch) => modifyFields.includes(ch));
-    if (needsModify) {
-      out.push(`ALTER TABLE ${t} MODIFY COLUMN ${columnDefinition(this, current)};`);
-    }
-    if (changes.includes('description')) {
-      const esc = (current.description ?? '').replace(/'/g, "''");
-      out.push(`ALTER TABLE ${t} MODIFY COLUMN ${columnDefinition(this, current)} COMMENT '${esc}';`);
+    // MySQL MODIFY replaces the full column definition. Always include COMMENT
+    // when the column has a description, so existing comments are preserved when
+    // only the type/nullability/default changes; and emit COMMENT '' to clear it
+    // when the user explicitly removes the description.
+    const modifyFields: AlterableColumnField[] = ['type', 'nullable', 'default', 'precision', 'scale', 'description'];
+    if (changes.some((ch) => modifyFields.includes(ch))) {
+      let stmt = `ALTER TABLE ${t} MODIFY COLUMN ${columnDefinition(this, current)}`;
+      if (current.description) {
+        const esc = current.description.replace(/'/g, "''");
+        stmt += ` COMMENT '${esc}'`;
+      } else if (changes.includes('description')) {
+        stmt += ` COMMENT ''`;
+      }
+      out.push(`${stmt};`);
     }
     if (changes.includes('primaryKey') || changes.includes('unique')) {
       out.push(`-- TODO: primary key / unique constraint change on ${tableName}.${current.name} requires manual ADD/DROP CONSTRAINT`);
@@ -130,5 +141,11 @@ export const mysql: Dialect = {
   },
   formatDropIndex(tableName: string, indexName: string): string {
     return `DROP INDEX ${this.formatColumnName(indexName)} ON ${this.formatTableName(tableName)};`;
+  },
+
+  // MySQL carries the comment inline in ADD COLUMN / MODIFY COLUMN, so no
+  // standalone statement is needed.
+  formatColumnComment(): string {
+    return '';
   },
 };

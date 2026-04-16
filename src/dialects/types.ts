@@ -73,4 +73,9 @@ export interface Dialect {
     isUnique: boolean,
   ): string;
   formatDropIndex(tableName: string, indexName: string): string;
+
+  // Returns a standalone column-comment statement for dialects that use them
+  // (PostgreSQL / Oracle). Dialects that carry the comment inline in the column
+  // definition (MySQL) or don't support comments (SQLite) return an empty string.
+  formatColumnComment(tableName: string, columnName: string, description: string): string;
 }

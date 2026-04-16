@@ -148,4 +148,9 @@ export const postgresql: Dialect = {
   formatDropIndex(_tableName: string, indexName: string): string {
     return `DROP INDEX ${this.formatColumnName(indexName)};`;
   },
+
+  formatColumnComment(tableName: string, columnName: string, description: string): string {
+    const esc = description.replace(/'/g, "''");
+    return `COMMENT ON COLUMN ${this.formatTableName(tableName)}.${this.formatColumnName(columnName)} IS '${esc}';`;
+  },
 };

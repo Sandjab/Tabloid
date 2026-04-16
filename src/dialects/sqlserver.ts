@@ -146,4 +146,9 @@ export const sqlserver: Dialect = {
   formatDropIndex(tableName: string, indexName: string): string {
     return `DROP INDEX ${this.formatColumnName(indexName)} ON ${this.formatTableName(tableName)};`;
   },
+
+  formatColumnComment(tableName: string, columnName: string, description: string): string {
+    const esc = description.replace(/'/g, "''");
+    return `EXEC sp_addextendedproperty @name = N'MS_Description', @value = N'${esc}', @level0type = N'SCHEMA', @level0name = N'dbo', @level1type = N'TABLE', @level1name = N'${tableName}', @level2type = N'COLUMN', @level2name = N'${columnName}';`;
+  },
 };
