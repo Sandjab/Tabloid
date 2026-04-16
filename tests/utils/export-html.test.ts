@@ -42,14 +42,21 @@ describe('htmlEscape', () => {
 });
 
 describe('slugify', () => {
-  it('lowercases and replaces non-alphanumerics', () => {
-    expect(slugify('Order Items!', 0)).toBe('order-items');
+  it('lowercases and replaces non-alphanumerics + appends index for uniqueness', () => {
+    expect(slugify('Order Items!', 0)).toBe('order-items-0');
+    expect(slugify('Order Items!', 1)).toBe('order-items-1');
   });
   it('strips diacritics', () => {
-    expect(slugify('Résumé', 0)).toBe('resume');
+    expect(slugify('Résumé', 2)).toBe('resume-2');
   });
   it('falls back for empty slug', () => {
     expect(slugify('😀', 3)).toBe('table-3');
+  });
+  it('produces distinct anchors for colliding names at different indices', () => {
+    // "User Profile" and "User_Profile" both normalise to the same base slug
+    // — but the index suffix keeps them unique.
+    expect(slugify('User Profile', 0)).toBe('user-profile-0');
+    expect(slugify('User_Profile', 1)).toBe('user-profile-1');
   });
 });
 
@@ -78,8 +85,8 @@ describe('exportHTML', () => {
       generatedAt: FIXED_DATE,
     });
     expect(html).toContain('<nav class="toc">');
-    expect(html).toContain('<a href="#users">users</a>');
-    expect(html).toContain('<a href="#posts">posts</a>');
+    expect(html).toContain('<a href="#users-0">users</a>');
+    expect(html).toContain('<a href="#posts-1">posts</a>');
   });
 
   it('renders constraint badges and descriptions', () => {
@@ -118,10 +125,10 @@ describe('exportHTML', () => {
       generatedAt: FIXED_DATE,
     });
     // Outgoing from posts → users
-    expect(html).toMatch(/<code>user_id<\/code> → <a href="#users">users<\/a>\.<code>id<\/code>/);
+    expect(html).toMatch(/<code>user_id<\/code> → <a href="#users-0">users<\/a>\.<code>id<\/code>/);
     // Incoming on users from posts
     expect(html).toMatch(/Referenced by/);
-    expect(html).toMatch(/<a href="#posts">posts<\/a>\.<code>user_id<\/code>/);
+    expect(html).toMatch(/<a href="#posts-1">posts<\/a>\.<code>user_id<\/code>/);
   });
 
   it('HTML-escapes malicious content in column description', () => {
@@ -186,6 +193,20 @@ describe('exportHTML', () => {
     });
     expect(html).toContain('<section class="erd">');
     expect(html).toContain('src="data:image/svg+xml;base64,PHN2Zy8+"');
+  });
+
+  it('HTML-escapes the svg data URL attribute value (defense in depth)', () => {
+    const html = exportHTML({
+      tables: makeTables(),
+      relations: [],
+      schemaName: 's',
+      dialect: 'generic',
+      svgDataUrl: 'data:image/svg+xml,<svg onclick="alert(1)"/>',
+      generatedAt: FIXED_DATE,
+    });
+    // Quotes and angle brackets escaped — no chance to break out of the src="…" attribute.
+    expect(html).not.toContain('onclick="alert(1)"');
+    expect(html).toContain('src="data:image/svg+xml,&lt;svg onclick=&quot;alert(1)&quot;/&gt;"');
   });
 
   it('omits the ERD section when svgDataUrl is absent', () => {

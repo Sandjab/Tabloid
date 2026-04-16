@@ -9,8 +9,9 @@ export function htmlEscape(s: string): string {
     .replace(/'/g, '&#39;');
 }
 
-// URL-safe, lowercase anchor. Falls back to `table-<index>` if the name yields
-// an empty slug (e.g. entirely non-ASCII).
+// URL-safe, lowercase anchor. Always suffixes with `-<index>` so different
+// tables never collide even when their names normalise to the same slug
+// (e.g. "User Profile" and "User_Profile" both slugify to "user-profile").
 export function slugify(name: string, index: number): string {
   const slug = name
     .toLowerCase()
@@ -18,7 +19,7 @@ export function slugify(name: string, index: number): string {
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
-  return slug || `table-${index}`;
+  return `${slug || 'table'}-${index}`;
 }
 
 function formatColumnType(col: Column): string {
@@ -47,10 +48,12 @@ interface ResolvedRelation {
 }
 
 function resolveRelations(tables: Table[], relations: Relation[]): ResolvedRelation[] {
+  // Index tables once so resolution stays O(R) instead of O(R*T).
+  const tableById = new Map(tables.map((t) => [t.id, t]));
   const out: ResolvedRelation[] = [];
   for (const rel of relations) {
-    const src = tables.find((t) => t.id === rel.sourceTableId);
-    const tgt = tables.find((t) => t.id === rel.targetTableId);
+    const src = tableById.get(rel.sourceTableId);
+    const tgt = tableById.get(rel.targetTableId);
     if (!src || !tgt) continue;
     const srcCol = src.columns.find((c) => c.id === rel.sourceColumnId);
     const tgtCol = tgt.columns.find((c) => c.id === rel.targetColumnId);
@@ -154,12 +157,25 @@ export function exportHTML(opts: ExportHtmlOptions): string {
   const anchorByName = new Map<string, string>();
   tables.forEach((t, i) => anchorByName.set(t.name, slugify(t.name, i)));
 
+  // Pre-group relations by table name so the per-table render loop below is O(R)
+  // total instead of O(T*R).
+  const outgoingByTable = new Map<string, ResolvedRelation[]>();
+  const incomingByTable = new Map<string, ResolvedRelation[]>();
+  for (const rel of resolved) {
+    const from = outgoingByTable.get(rel.fromTable) ?? [];
+    from.push(rel);
+    outgoingByTable.set(rel.fromTable, from);
+    const to = incomingByTable.get(rel.toTable) ?? [];
+    to.push(rel);
+    incomingByTable.set(rel.toTable, to);
+  }
+
   const toc = tables
     .map((t) => `<li><a href="#${htmlEscape(anchorByName.get(t.name)!)}">${htmlEscape(t.name)}</a></li>`)
     .join('');
 
   const erdSection = svgDataUrl
-    ? `<section class="erd"><h2>Diagram</h2><img src="${svgDataUrl}" alt="Schema diagram"/></section>`
+    ? `<section class="erd"><h2>Diagram</h2><img src="${htmlEscape(svgDataUrl)}" alt="Schema diagram"/></section>`
     : '';
 
   const tableBlocks = tables
@@ -194,8 +210,8 @@ export function exportHTML(opts: ExportHtmlOptions): string {
             .join('')}</ul>`
         : '';
 
-      const outgoing = resolved.filter((r) => r.fromTable === t.name);
-      const incoming = resolved.filter((r) => r.toTable === t.name);
+      const outgoing = outgoingByTable.get(t.name) ?? [];
+      const incoming = incomingByTable.get(t.name) ?? [];
       const relBlocks: string[] = [];
       if (outgoing.length > 0) {
         relBlocks.push(
