@@ -3,6 +3,7 @@ import {
   encodeSchemaToHash,
   decodeSchemaFromHash,
   buildShareUrl,
+  clearShareHash,
   URL_HASH_PARAM,
 } from '@/utils/url-share';
 import type { Relation, Table } from '@/types/schema';
@@ -73,5 +74,59 @@ describe('url-share', () => {
       'https://example.com/tabloid/',
     );
     expect(url).toMatch(/^https:\/\/example\.com\/tabloid\/#s=/);
+  });
+});
+
+describe('clearShareHash', () => {
+  const origLocation = window.location;
+  const origHistory = window.history;
+
+  function withMockedLocation(
+    initialHref: string,
+    fn: (state: { url: string }) => void,
+  ): void {
+    const state = { url: initialHref };
+    // jsdom's Location is read-only in recent versions; replace with a plain object mock.
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: new URL(initialHref),
+    });
+    Object.defineProperty(window, 'history', {
+      configurable: true,
+      value: {
+        replaceState: (_s: unknown, _t: string, u: string) => {
+          state.url = u;
+          Object.defineProperty(window, 'location', {
+            configurable: true,
+            value: new URL(u),
+          });
+        },
+      },
+    });
+    try { fn(state); } finally {
+      Object.defineProperty(window, 'location', { configurable: true, value: origLocation });
+      Object.defineProperty(window, 'history', { configurable: true, value: origHistory });
+    }
+  }
+
+  it('removes the s= parameter while preserving other hash params', () => {
+    withMockedLocation('https://example.com/#s=abc&keep=1', (state) => {
+      clearShareHash();
+      expect(state.url).toBe('https://example.com/#keep=1');
+    });
+  });
+
+  it('removes the entire hash when s= is the only param', () => {
+    withMockedLocation('https://example.com/#s=abc', (state) => {
+      clearShareHash();
+      expect(state.url).toBe('https://example.com/');
+    });
+  });
+
+  it('is a no-op when s= is absent', () => {
+    withMockedLocation('https://example.com/#other=1', (state) => {
+      clearShareHash();
+      expect(state.url).toBe('https://example.com/#other=1');
+    });
   });
 });
