@@ -53,6 +53,7 @@ import {
   GitCompare,
   Link2,
   ShieldCheck,
+  Sparkles,
 } from 'lucide-react';
 import { useDiffStore } from '@/store/useDiffStore';
 import { validateSchema } from '@/utils/validate-schema';
@@ -63,9 +64,10 @@ interface ToolbarProps {
   onExportOpen: () => void;
   onDiffOpen: () => void;
   onLintOpen: () => void;
+  onAiOpen: () => void;
 }
 
-export default function Toolbar({ onSearchOpen, onExportOpen, onDiffOpen, onLintOpen }: ToolbarProps) {
+export default function Toolbar({ onSearchOpen, onExportOpen, onDiffOpen, onLintOpen, onAiOpen }: ToolbarProps) {
   const diffBaseline = useDiffStore((s) => s.baseline);
   const addTable = useSchemaStore((s) => s.addTable);
   const loadSchema = useSchemaStore((s) => s.loadSchema);
@@ -506,6 +508,16 @@ export default function Toolbar({ onSearchOpen, onExportOpen, onDiffOpen, onLint
             {issueCount.total}
           </span>
         )}
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onAiOpen}
+        title="AI assistant"
+        data-testid="ai-btn"
+      >
+        <Sparkles className="size-3.5 text-violet-500" />
+        AI
       </Button>
       <Button
         variant="ghost"
