@@ -48,16 +48,20 @@ import {
   ClipboardPaste,
   Database,
   GitCompare,
+  ShieldCheck,
 } from 'lucide-react';
 import { useDiffStore } from '@/store/useDiffStore';
+import { validateSchema } from '@/utils/validate-schema';
+import { useMemo } from 'react';
 
 interface ToolbarProps {
   onSearchOpen: () => void;
   onExportOpen: () => void;
   onDiffOpen: () => void;
+  onLintOpen: () => void;
 }
 
-export default function Toolbar({ onSearchOpen, onExportOpen, onDiffOpen }: ToolbarProps) {
+export default function Toolbar({ onSearchOpen, onExportOpen, onDiffOpen, onLintOpen }: ToolbarProps) {
   const diffBaseline = useDiffStore((s) => s.baseline);
   const addTable = useSchemaStore((s) => s.addTable);
   const loadSchema = useSchemaStore((s) => s.loadSchema);
@@ -65,6 +69,17 @@ export default function Toolbar({ onSearchOpen, onExportOpen, onDiffOpen }: Tool
   const setSchemaName = useSchemaStore((s) => s.setSchemaName);
   const dialect = useSchemaStore((s) => s.dialect);
   const setDialect = useSchemaStore((s) => s.setDialect);
+  const tables = useSchemaStore((s) => s.tables);
+  const relations = useSchemaStore((s) => s.relations);
+
+  const issueCount = useMemo(() => {
+    const ws = validateSchema(tables, relations, dialect);
+    return {
+      total: ws.length,
+      errors: ws.filter((w) => w.severity === 'error').length,
+      warnings: ws.filter((w) => w.severity === 'warning').length,
+    };
+  }, [tables, relations, dialect]);
   const { screenToFlowPosition, fitView } = useReactFlow();
   const { undo, redo, canUndo, canRedo } = useUndoRedo();
   const { theme, toggleTheme } = useTheme();
@@ -421,6 +436,34 @@ export default function Toolbar({ onSearchOpen, onExportOpen, onDiffOpen }: Tool
       >
         <GitCompare className="size-3.5" />
         Diff
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onLintOpen}
+        title={`Validation (${issueCount.total} issue${issueCount.total === 1 ? '' : 's'})`}
+        data-testid="lint-btn"
+      >
+        <ShieldCheck
+          className={`size-3.5 ${
+            issueCount.errors > 0
+              ? 'text-red-500'
+              : issueCount.warnings > 0
+                ? 'text-amber-500'
+                : issueCount.total > 0
+                  ? 'text-sky-500'
+                  : 'text-emerald-500'
+          }`}
+        />
+        Lint
+        {issueCount.total > 0 && (
+          <span
+            className="ml-1 rounded-full bg-muted px-1.5 text-[10px] font-medium"
+            data-testid="lint-badge"
+          >
+            {issueCount.total}
+          </span>
+        )}
       </Button>
       <Button
         variant="ghost"

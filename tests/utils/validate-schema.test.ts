@@ -129,4 +129,144 @@ describe('validateSchema', () => {
   it('handles empty schema', () => {
     expect(validateSchema([], [])).toHaveLength(0);
   });
+
+  // --- New rules: fk-cycle, fk-missing-index, orphan-table, reserved-word, naming-inconsistency ---
+
+  it('flags FK column without index as info-level hint', () => {
+    const tables: Table[] = [
+      makeTable('users'),
+      {
+        id: 'posts',
+        name: 'posts',
+        columns: [
+          { id: 'posts-c1', name: 'id', type: 'SERIAL', isPrimaryKey: true, isNullable: false, isUnique: false },
+          { id: 'posts-c2', name: 'user_id', type: 'SERIAL', isPrimaryKey: false, isNullable: false, isUnique: false },
+        ],
+        position: { x: 0, y: 0 },
+      },
+    ];
+    const relations: Relation[] = [{
+      id: 'r1',
+      sourceTableId: 'posts',
+      sourceColumnId: 'posts-c2',
+      targetTableId: 'users',
+      targetColumnId: 'users-c1',
+      type: 'many-to-one',
+    }];
+    const warnings = validateSchema(tables, relations);
+    const hint = warnings.find((w) => w.type === 'fk-missing-index');
+    expect(hint).toBeDefined();
+    expect(hint!.severity).toBe('info');
+    expect(hint!.tableId).toBe('posts');
+  });
+
+  it('does not flag FK-missing-index when the FK column has an index', () => {
+    const tables: Table[] = [
+      makeTable('users'),
+      {
+        id: 'posts',
+        name: 'posts',
+        columns: [
+          { id: 'posts-c1', name: 'id', type: 'SERIAL', isPrimaryKey: true, isNullable: false, isUnique: false },
+          { id: 'posts-c2', name: 'user_id', type: 'SERIAL', isPrimaryKey: false, isNullable: false, isUnique: false },
+        ],
+        indexes: [{ id: 'idx1', name: 'idx_user_id', columnIds: ['posts-c2'], isUnique: false }],
+        position: { x: 0, y: 0 },
+      },
+    ];
+    const relations: Relation[] = [{
+      id: 'r1',
+      sourceTableId: 'posts',
+      sourceColumnId: 'posts-c2',
+      targetTableId: 'users',
+      targetColumnId: 'users-c1',
+      type: 'many-to-one',
+    }];
+    const warnings = validateSchema(tables, relations);
+    expect(warnings.some((w) => w.type === 'fk-missing-index')).toBe(false);
+  });
+
+  it('detects FK cycles', () => {
+    const tables: Table[] = ['a', 'b', 'c'].map((name) => ({
+      id: name,
+      name,
+      columns: [
+        { id: `${name}-id`, name: 'id', type: 'SERIAL', isPrimaryKey: true, isNullable: false, isUnique: false },
+        { id: `${name}-ref`, name: 'ref', type: 'SERIAL', isPrimaryKey: false, isNullable: false, isUnique: false },
+      ],
+      position: { x: 0, y: 0 },
+    }));
+    // a → b → c → a
+    const relations: Relation[] = [
+      { id: 'r1', sourceTableId: 'a', sourceColumnId: 'a-ref', targetTableId: 'b', targetColumnId: 'b-id', type: 'many-to-one' },
+      { id: 'r2', sourceTableId: 'b', sourceColumnId: 'b-ref', targetTableId: 'c', targetColumnId: 'c-id', type: 'many-to-one' },
+      { id: 'r3', sourceTableId: 'c', sourceColumnId: 'c-ref', targetTableId: 'a', targetColumnId: 'a-id', type: 'many-to-one' },
+    ];
+    const warnings = validateSchema(tables, relations);
+    expect(warnings.filter((w) => w.type === 'fk-cycle').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('does not flag self-FK as a cycle', () => {
+    const tables: Table[] = [
+      {
+        id: 'tree',
+        name: 'tree',
+        columns: [
+          { id: 'tree-id', name: 'id', type: 'SERIAL', isPrimaryKey: true, isNullable: false, isUnique: false },
+          { id: 'tree-parent', name: 'parent_id', type: 'SERIAL', isPrimaryKey: false, isNullable: true, isUnique: false },
+        ],
+        position: { x: 0, y: 0 },
+      },
+    ];
+    const relations: Relation[] = [
+      { id: 'r1', sourceTableId: 'tree', sourceColumnId: 'tree-parent', targetTableId: 'tree', targetColumnId: 'tree-id', type: 'many-to-one' },
+    ];
+    const warnings = validateSchema(tables, relations);
+    expect(warnings.some((w) => w.type === 'fk-cycle')).toBe(false);
+  });
+
+  it('flags orphan tables as info hints', () => {
+    const tables = [makeTable('t1'), makeTable('t2'), makeTable('isolated')];
+    const relations: Relation[] = [
+      { id: 'r1', sourceTableId: 't2', sourceColumnId: 't2-c1', targetTableId: 't1', targetColumnId: 't1-c1', type: 'many-to-one' },
+    ];
+    const warnings = validateSchema(tables, relations);
+    const orphan = warnings.find((w) => w.type === 'orphan-table');
+    expect(orphan).toBeDefined();
+    expect(orphan!.tableId).toBe('isolated');
+  });
+
+  it('flags reserved SQL words in table and column names', () => {
+    const tables: Table[] = [
+      {
+        id: 't1',
+        name: 'user',
+        columns: [
+          { id: 't1-c1', name: 'order', type: 'SERIAL', isPrimaryKey: true, isNullable: false, isUnique: false },
+        ],
+        position: { x: 0, y: 0 },
+      },
+    ];
+    const warnings = validateSchema(tables, []);
+    const reserved = warnings.filter((w) => w.type === 'reserved-word');
+    expect(reserved).toHaveLength(2);
+  });
+
+  it('flags mixed naming styles across tables', () => {
+    const tables = [
+      { ...makeTable('users'), name: 'users' },
+      { ...makeTable('orderItems'), name: 'orderItems' },
+    ];
+    const warnings = validateSchema(tables, []);
+    expect(warnings.some((w) => w.type === 'naming-inconsistency')).toBe(true);
+  });
+
+  it('does not flag naming-inconsistency for all snake_case', () => {
+    const tables = [
+      { ...makeTable('users'), name: 'users' },
+      { ...makeTable('order_items'), name: 'order_items' },
+    ];
+    const warnings = validateSchema(tables, []);
+    expect(warnings.some((w) => w.type === 'naming-inconsistency')).toBe(false);
+  });
 });
