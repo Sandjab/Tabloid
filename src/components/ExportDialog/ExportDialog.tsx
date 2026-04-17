@@ -58,8 +58,9 @@ export default function ExportDialog({ open, onOpenChange }: ExportDialogProps) 
   const effectiveDialect = isNative ? projectDialect : exportDialect;
 
   const validationIssues = useMemo(() => validateSchema(tables, relations, projectDialect), [tables, relations, projectDialect]);
-  const hasIssues = validationIssues.length > 0;
-  const exportBlocked = hasIssues;
+  const errorCount = validationIssues.filter((w) => w.severity === 'error').length;
+  const warningCount = validationIssues.filter((w) => w.severity === 'warning').length;
+  const exportBlocked = errorCount > 0;
 
   const preview = useMemo(() => {
     switch (format) {
@@ -184,9 +185,8 @@ export default function ExportDialog({ open, onOpenChange }: ExportDialogProps) 
             className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive"
             data-testid="export-validation-banner"
           >
-            Schema has {validationIssues.filter((w) => w.severity === 'error').length || 'no'} error(s) and{' '}
-            {validationIssues.filter((w) => w.severity === 'warning').length || 'no'} warning(s).
-            Fix all issues before exporting to {format.toUpperCase()}.
+            Schema has {errorCount} error(s) and {warningCount || 'no'} warning(s).
+            Fix errors before exporting to {format.toUpperCase()}.
           </div>
         )}
 
