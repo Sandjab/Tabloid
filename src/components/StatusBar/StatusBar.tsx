@@ -1,10 +1,23 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useReactFlow, useStore } from '@xyflow/react';
+import { AlertCircle, AlertTriangle, Info } from 'lucide-react';
 import { useSchemaStore } from '@/store/useSchemaStore';
 import { validateSchema, type ValidationWarning } from '@/utils/validate-schema';
 
 const zoomSelector = (s: { transform: [number, number, number] }) =>
   Math.round(s.transform[2] * 100);
+
+const SEVERITY_ICON = {
+  error: AlertCircle,
+  warning: AlertTriangle,
+  info: Info,
+} as const;
+
+const SEVERITY_TONE = {
+  error: 'text-red-600 dark:text-red-400',
+  warning: 'text-amber-600 dark:text-amber-400',
+  info: 'text-sky-600 dark:text-sky-400',
+} as const;
 
 export default function StatusBar() {
   const tables = useSchemaStore((s) => s.tables);
@@ -39,6 +52,7 @@ export default function StatusBar() {
   const warns = warnings.filter((w) => w.severity === 'warning');
   const errorCount = errors.length;
   const warnCount = warns.length;
+  // Inline preview shows only actionable issues (errors > warnings); info hints live in the popover.
   const topWarning = errors[0] ?? warns[0];
 
   const handleZoomReset = useCallback(() => {
@@ -74,19 +88,20 @@ export default function StatusBar() {
           className="absolute bottom-full left-0 mb-px max-h-48 w-80 overflow-y-auto rounded-t-md border border-b-0 border-border bg-popover shadow-sm"
           data-testid="validation-panel"
         >
-          {warnings.map((w, i) => (
-            <button
-              key={`${w.type}-${w.tableId}-${i}`}
-              className="flex w-full items-start gap-2 px-3 py-1.5 text-left text-xs hover:bg-accent"
-              onClick={() => { handleWarningClick(w); setExpanded(false); }}
-              data-testid={`warning-${w.type}-${i}`}
-            >
-              <span className={w.severity === 'error' ? 'text-destructive' : 'text-yellow-500'}>
-                {w.severity === 'error' ? '●' : '▲'}
-              </span>
-              <span className="text-foreground">{w.message}</span>
-            </button>
-          ))}
+          {warnings.map((w, i) => {
+            const Icon = SEVERITY_ICON[w.severity];
+            return (
+              <button
+                key={`${w.type}-${w.tableId}-${i}`}
+                className="flex w-full items-start gap-2 px-3 py-1.5 text-left text-xs hover:bg-accent"
+                onClick={() => { handleWarningClick(w); setExpanded(false); }}
+                data-testid={`warning-${w.type}-${i}`}
+              >
+                <Icon className={`mt-0.5 size-3.5 shrink-0 ${SEVERITY_TONE[w.severity]}`} />
+                <span className="text-foreground">{w.message}</span>
+              </button>
+            );
+          })}
         </div>
       )}
 
