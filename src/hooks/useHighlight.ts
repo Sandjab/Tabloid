@@ -16,7 +16,7 @@ export function useTableHighlight(tableId: string): 'error' | 'warning' | null {
     for (const w of warnings) {
       if (w.tableId === tableId && !w.columnId) {
         if (w.severity === 'error') return 'error';
-        severity = 'warning';
+        if (w.severity === 'warning') severity = 'warning';
       }
     }
     return severity;
@@ -33,7 +33,7 @@ export function useColumnHighlight(
     for (const w of warnings) {
       if (w.tableId === tableId && w.columnId === columnId) {
         if (w.severity === 'error') return 'error';
-        severity = 'warning';
+        if (w.severity === 'warning') severity = 'warning';
       }
     }
     return severity;
