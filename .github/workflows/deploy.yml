@@ -26,6 +26,13 @@ jobs:
       - run: npm install
       - run: npm run type-check
       - run: npm run build
+      # Anonymous, cookie-free visit counter (GoatCounter) — injected into the
+      # published copy only, never into the sources. The grep fails the build
+      # if the injection touched nothing.
+      - name: Inject visit counter
+        run: |
+          find dist -name '*.html' -exec sed -i 's|</body>|<script data-goatcounter="https://sandjab.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>\n</body>|' {} +
+          grep -rl goatcounter dist --include='*.html' >/dev/null
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
